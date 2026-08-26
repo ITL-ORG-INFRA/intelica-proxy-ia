@@ -1,0 +1,76 @@
+name: Diagnostico OIDC
+
+# Imprime los claims del token que GitHub emite, para poder escribir la trust
+# policy contra el valor REAL de 'sub' en vez de contra el que uno supone.
+#
+# Hace falta porque el valor de 'sub' depende de detalles que no son evidentes:
+# si el job declara environment, si corre dentro de un workflow reutilizable, o
+# si se dispara por rama o por tag. Adivinarlo cuesta una tarde; leerlo, un
+# minuto.
+#
+# Se ejecuta a mano: Actions -> Diagnostico OIDC -> Run workflow.
+#
+# NO imprime el token, solo los claims. El token es una credencial de corta
+# vida; los claims son metadatos de la ejecucion y no abren nada por si solos.
+
+on:
+  workflow_dispatch:
+    inputs:
+      entorno:
+        description: Environment con el que probar (vacio = sin environment)
+        required: false
+        default: dev
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  claims:
+    name: Claims del token
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.entorno }}
+    steps:
+      - name: Pedir el token y mostrar sus claims
+        run: |
+          set -euo pipefail
+
+          respuesta="$(curl -sS \
+            -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com")"
+
+          token="$(echo "$respuesta" | jq -r '.value')"
+          if [ -z "$token" ] || [ "$token" = "null" ]; then
+            echo "::error::no se pudo obtener el token (¿falta id-token: write?)"
+            exit 1
+          fi
+
+          # El payload es la parte central del JWT, en base64url sin relleno.
+          payload="$(echo "$token" | cut -d. -f2)"
+          case $(( ${#payload} % 4 )) in
+            2) payload="${payload}==" ;;
+            3) payload="${payload}=" ;;
+          esac
+          claims="$(echo "$payload" | tr '_-' '/+' | base64 -d 2>/dev/null)"
+
+          echo "=== claims relevantes para la trust policy ==="
+          echo "$claims" | jq '{
+            sub, aud, repository, repository_owner,
+            environment, ref, workflow_ref, job_workflow_ref
+          }'
+
+          sub="$(echo "$claims" | jq -r '.sub')"
+          {
+            echo "### Trust policy que aceptaria ESTE token"
+            echo ""
+            echo '```json'
+            jq -n --arg sub "$sub" '{
+              "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+              "token.actions.githubusercontent.com:sub": $sub
+            }'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo ""
+          echo "sub real: ${sub}"
