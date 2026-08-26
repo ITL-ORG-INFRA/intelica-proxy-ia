@@ -75,6 +75,44 @@ jobs:
           echo "arn=$arn" >> "$GITHUB_OUTPUT"
           echo "rol tomado de: $origen"
 
+      # El 'sub' del token es lo que la trust policy compara, y su valor
+      # depende de cosas que no se ven desde fuera: si el job declara
+      # environment, y si corre dentro de un workflow reutilizable como este.
+      # Imprimirlo aqui, en la ruta real, convierte el fallo mas opaco de OIDC
+      # —"Assuming role" reintentandose sin decir por que— en una linea que se
+      # compara a ojo con la politica.
+      #
+      # Se imprimen claims, nunca el token: los claims son metadatos de la
+      # ejecucion, el token es una credencial.
+      - name: Claims del token OIDC
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          respuesta="$(curl -sS \
+            -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com")" || exit 0
+          token="$(echo "$respuesta" | jq -r '.value // empty')"
+          [ -z "$token" ] && { echo "no se pudo leer el token"; exit 0; }
+
+          payload="$(echo "$token" | cut -d. -f2)"
+          case $(( ${#payload} % 4 )) in
+            2) payload="${payload}==" ;;
+            3) payload="${payload}=" ;;
+          esac
+          claims="$(echo "$payload" | tr '_-' '/+' | base64 -d 2>/dev/null)" || exit 0
+
+          sub="$(echo "$claims" | jq -r '.sub')"
+          echo "sub = ${sub}"
+          echo "aud = $(echo "$claims" | jq -r '.aud')"
+          echo ""
+          echo "La trust policy del rol tiene que aceptar EXACTAMENTE ese sub."
+          {
+            echo "### Token OIDC de ${{ inputs.entorno }}"
+            echo '```'
+            echo "sub = ${sub}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ steps.rol.outputs.arn }}
