@@ -19,6 +19,18 @@ permissions:
   contents: read
   id-token: write
 
+# Que entornos estan activos lo dice la variable de repositorio
+# ENTORNOS_ACTIVOS, por ejemplo "dev" o "dev,qa,prod". Sin ella se asume que
+# solo hay dev.
+#
+# No es burocracia: si la cadena intenta desplegar a un entorno cuya
+# infraestructura aun no existe, el run sale en rojo en cada merge. Un pipeline
+# que siempre esta rojo deja de ser una senal y la gente aprende a ignorarlo,
+# que es peor que no tenerlo. Un entorno se activa cuando esta listo.
+#
+# Se lee con vars.* directamente en cada 'if' porque las condiciones de job no
+# pueden usar el contexto env.
+
 jobs:
   # Se construye UNA vez. Los mismos zips recorren dev, qa y prod: es la unica
   # forma de que "esto ya se probo en qa" signifique algo. Si cada entorno
@@ -52,7 +64,10 @@ jobs:
 
   dev:
     needs: construir
-    if: github.event_name == 'push' || inputs.entorno == 'dev'
+    if: >-
+      contains(vars.ENTORNOS_ACTIVOS || 'dev', 'dev') && (
+        github.event_name == 'push' || inputs.entorno == 'dev'
+      )
     uses: ./.github/workflows/desplegar-entorno.yml
     with:
       entorno: dev
@@ -61,7 +76,8 @@ jobs:
   qa:
     needs: [construir, dev]
     if: >-
-      always() && needs.construir.result == 'success' && (
+      always() && needs.construir.result == 'success'
+      && contains(vars.ENTORNOS_ACTIVOS || 'dev', 'qa') && (
         (github.event_name == 'push' && needs.dev.result == 'success') ||
         (github.event_name == 'workflow_dispatch' && inputs.entorno == 'qa')
       )
@@ -73,7 +89,8 @@ jobs:
   prod:
     needs: [construir, qa]
     if: >-
-      always() && needs.construir.result == 'success' && (
+      always() && needs.construir.result == 'success'
+      && contains(vars.ENTORNOS_ACTIVOS || 'dev', 'prod') && (
         (github.event_name == 'push' && needs.qa.result == 'success') ||
         (github.event_name == 'workflow_dispatch' && inputs.entorno == 'prod')
       )

@@ -120,6 +120,22 @@ dónde tomó el ARN, así que si algo no cuadra se ve enseguida.
 
 ## Configuración en GitHub
 
+### Qué entornos están activos
+
+Variable de repositorio **`ENTORNOS_ACTIVOS`** con la lista separada por comas de
+los entornos cuya infraestructura ya existe:
+
+| Valor | Efecto |
+|---|---|
+| sin definir | sólo `dev` (el valor por defecto) |
+| `dev` | sólo dev |
+| `dev,qa` | dev y qa |
+| `dev,qa,prod` | la cadena completa |
+
+Un entorno que no esté en la lista se salta, no falla. Así el pipeline no sale en
+rojo en cada merge por intentar desplegar a algo que todavía no existe — y un
+pipeline que siempre está rojo deja de ser una señal.
+
 - Environment **`dev`**: sin protección.
 - Environment **`qa`**: sin protección por defecto. Si el equipo de QA prefiere
   que su entorno no cambie bajo sus pies a mitad de una tanda de pruebas,
