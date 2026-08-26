@@ -100,12 +100,23 @@ el rol de qa no debe poder tocar prod. **Nada de S3, DynamoDB, KMS ni IAM**: el 
 despliega código, no toca datos ni permisos. Si el rol del CI puede leer el bucket
 raw, la frontera del sistema se ha roto por la puerta de atrás.
 
-Los ARN de los roles se configuran como *variables* del repo en GitHub
-(Settings → Secrets and variables → Actions → Variables):
+Los ARN de los roles se configuran como **variables** (no secretos: un ARN no lo
+es). Hay dos sitios donde ponerlas y el workflow acepta los dos:
+
+**Opción A — por environment (recomendada).** Settings → Environments → `dev` →
+Variables → `AWS_ROLE` = el ARN. Lo mismo en `qa` y en `prod`. Mismo nombre de
+variable en los tres, cada uno con su valor. Es lo natural: el ARN del rol de dev
+es propiedad del entorno dev.
+
+**Opción B — a nivel de repositorio.** Settings → Secrets and variables → Actions
+→ Variables:
 
 - `AWS_ROLE_DEV`
 - `AWS_ROLE_QA`
 - `AWS_ROLE_PROD`
+
+Si están definidas las dos, gana la del environment. El job dice en su log de
+dónde tomó el ARN, así que si algo no cuadra se ve enseguida.
 
 ## Configuración en GitHub
 

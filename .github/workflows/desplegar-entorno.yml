@@ -13,9 +13,12 @@ on:
         required: true
         type: string
       rol:
-        description: ARN del rol que se asume por OIDC
-        required: true
+        description: >-
+          ARN del rol OIDC, si viene de una variable de repositorio.
+          Opcional: si el environment define AWS_ROLE, esa gana.
+        required: false
         type: string
+        default: ""
       region:
         required: false
         type: string
@@ -42,16 +45,39 @@ jobs:
           name: dist
           path: dist
 
-      - name: Comprobar que el rol esta configurado
-        if: inputs.rol == ''
+      # El rol se puede configurar de dos maneras y las dos valen:
+      #
+      #   a) variable AWS_ROLE dentro del environment (dev/qa/prod)
+      #   b) variable AWS_ROLE_DEV / _QA / _PROD a nivel de repositorio
+      #
+      # La (a) sólo se resuelve AQUI, porque es este job el que declara el
+      # environment; el job que llama a este workflow no lo declara y por tanto
+      # no ve las variables de environment. Por eso se mira aqui y no alli.
+      - name: Resolver el rol a asumir
+        id: rol
         run: |
-          echo "::error::falta la variable AWS_ROLE_$(echo '${{ inputs.entorno }}' | tr '[:lower:]' '[:upper:]') en el repo"
-          echo "Ver docs/FRONTERA-CON-TERRAFORM.md"
-          exit 1
+          arn="${{ vars.AWS_ROLE }}"
+          origen="variable AWS_ROLE del environment ${{ inputs.entorno }}"
+          if [ -z "$arn" ]; then
+            arn="${{ inputs.rol }}"
+            origen="variable de repositorio AWS_ROLE_$(echo '${{ inputs.entorno }}' | tr '[:lower:]' '[:upper:]')"
+          fi
+          if [ -z "$arn" ]; then
+            {
+              echo "::error::no hay rol configurado para el entorno ${{ inputs.entorno }}"
+              echo "Define UNA de estas dos:"
+              echo "  · variable AWS_ROLE dentro del environment '${{ inputs.entorno }}'"
+              echo "  · variable AWS_ROLE_$(echo '${{ inputs.entorno }}' | tr '[:lower:]' '[:upper:]') a nivel de repositorio"
+              echo "Ver docs/FRONTERA-CON-TERRAFORM.md"
+            } >&2
+            exit 1
+          fi
+          echo "arn=$arn" >> "$GITHUB_OUTPUT"
+          echo "rol tomado de: $origen"
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ inputs.rol }}
+          role-to-assume: ${{ steps.rol.outputs.arn }}
           aws-region: ${{ inputs.region }}
 
       - name: Publicar
