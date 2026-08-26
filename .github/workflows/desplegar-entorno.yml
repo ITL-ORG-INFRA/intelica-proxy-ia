@@ -1,0 +1,74 @@
+name: Desplegar a un entorno
+
+# Los pasos de despliegue viven aqui una sola vez y los tres entornos los
+# llaman. Con dev, qa y prod repitiendo los mismos cuatro pasos, tarde o
+# temprano uno se queda atras cuando se toca otro — y el que se queda atras
+# suele ser prod, que es el que menos se toca y mas duele.
+
+on:
+  workflow_call:
+    inputs:
+      entorno:
+        description: dev, qa o prod
+        required: true
+        type: string
+      rol:
+        description: ARN del rol que se asume por OIDC
+        required: true
+        type: string
+      region:
+        required: false
+        type: string
+        default: eu-south-2
+
+permissions:
+  contents: read
+  id-token: write        # OIDC: sin claves de acceso guardadas en secretos
+
+jobs:
+  desplegar:
+    name: ${{ inputs.entorno }}
+    runs-on: ubuntu-latest
+    # La proteccion (revisores obligatorios) se configura en GitHub por
+    # entorno, no aqui. Asi se puede exigir aprobacion para prod sin tocar
+    # este fichero.
+    environment: ${{ inputs.entorno }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Recuperar el artefacto construido
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - name: Comprobar que el rol esta configurado
+        if: inputs.rol == ''
+        run: |
+          echo "::error::falta la variable AWS_ROLE_$(echo '${{ inputs.entorno }}' | tr '[:lower:]' '[:upper:]') en el repo"
+          echo "Ver docs/FRONTERA-CON-TERRAFORM.md"
+          exit 1
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.rol }}
+          aws-region: ${{ inputs.region }}
+
+      - name: Publicar
+        run: ./scripts/publish.sh ${{ inputs.entorno }}
+
+      - name: Verificar que lo desplegado coincide con el artefacto
+        run: ./scripts/verify.sh ${{ inputs.entorno }}
+
+      - name: Resumen
+        if: always()
+        run: |
+          {
+            echo "### ${{ inputs.entorno }}"
+            echo ""
+            echo "Revision: \`$(jq -r .revision dist/manifiesto.json)\`"
+            echo ""
+            echo '```json'
+            jq .artefactos dist/manifiesto.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

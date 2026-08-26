@@ -1,0 +1,7 @@
+# Dependencias que van en el Lambda Layer.
+# boto3 y botocore NO se listan: ya vienen en el runtime de Lambda.
+#
+# Se fija la version exacta a proposito: el sanitizador es un componente PCI y
+# un cambio de dependencia que nadie eligio es un cambio en el alcance de la
+# auditoria. Actualizar es una decision, no un efecto secundario.
+anthropic==0.69.0

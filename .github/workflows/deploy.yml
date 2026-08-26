@@ -1,0 +1,83 @@
+name: Desplegar
+
+# Al mergear a main: dev -> qa -> prod, encadenados.
+# A mano (workflow_dispatch): sólo el entorno que se elija.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      entorno:
+        description: Entorno al que desplegar
+        required: true
+        default: dev
+        type: choice
+        options: [dev, qa, prod]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  # Se construye UNA vez. Los mismos zips recorren dev, qa y prod: es la unica
+  # forma de que "esto ya se probo en qa" signifique algo. Si cada entorno
+  # reconstruyera, lo aprobado y lo desplegado serian artefactos distintos.
+  construir:
+    name: Construir
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Construir artefactos
+        run: ./scripts/build.sh
+
+      - name: Resumen
+        run: |
+          {
+            echo "### Artefactos"
+            echo '```json'
+            cat dist/manifiesto.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 30
+
+  dev:
+    needs: construir
+    if: github.event_name == 'push' || inputs.entorno == 'dev'
+    uses: ./.github/workflows/desplegar-entorno.yml
+    with:
+      entorno: dev
+      rol: ${{ vars.AWS_ROLE_DEV }}
+
+  qa:
+    needs: [construir, dev]
+    if: >-
+      always() && needs.construir.result == 'success' && (
+        (github.event_name == 'push' && needs.dev.result == 'success') ||
+        (github.event_name == 'workflow_dispatch' && inputs.entorno == 'qa')
+      )
+    uses: ./.github/workflows/desplegar-entorno.yml
+    with:
+      entorno: qa
+      rol: ${{ vars.AWS_ROLE_QA }}
+
+  prod:
+    needs: [construir, qa]
+    if: >-
+      always() && needs.construir.result == 'success' && (
+        (github.event_name == 'push' && needs.qa.result == 'success') ||
+        (github.event_name == 'workflow_dispatch' && inputs.entorno == 'prod')
+      )
+    uses: ./.github/workflows/desplegar-entorno.yml
+    with:
+      entorno: prod
+      rol: ${{ vars.AWS_ROLE_PROD }}

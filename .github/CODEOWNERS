@@ -1,0 +1,30 @@
+# Quien tiene que revisar que.
+#
+# ATENCION: los equipos de abajo son marcadores de posicion. Sustituyelos por
+# los reales de la organizacion antes de confiar en este fichero — GitHub
+# ignora en silencio las entradas que apuntan a equipos que no existen, asi que
+# un CODEOWNERS mal puesto no protege nada y ademas lo parece.
+
+# Por defecto
+*                           @ITL-ORG-INFRA/plataforma
+
+# --- componentes PCI -------------------------------------------------------
+# Estos ficheros SON el control de seguridad. Un cambio aqui puede dejar pasar
+# datos de tarjeta sin que ninguna prueba falle, asi que no se mergean sin que
+# los mire alguien que entienda el modelo de amenaza.
+/src/sanitizer/             @ITL-ORG-INFRA/seguridad @ITL-ORG-INFRA/plataforma
+/src/verificador/           @ITL-ORG-INFRA/seguridad @ITL-ORG-INFRA/plataforma
+/src/canario/               @ITL-ORG-INFRA/seguridad @ITL-ORG-INFRA/plataforma
+
+# La segunda implementacion tiene que seguir siendo INDEPENDIENTE de la
+# primera. Si alguien "refactoriza para reutilizar codigo" entre las dos, el
+# verificador deja de verificar y nadie se entera.
+/src/verificador/deteccion2.py  @ITL-ORG-INFRA/seguridad
+
+# Cualquier numero nuevo que parezca una tarjeta pasa por aqui.
+# Ver docs/SOBRE-LOS-PANES-DE-PRUEBA.md
+/tests/                     @ITL-ORG-INFRA/seguridad @ITL-ORG-INFRA/plataforma
+
+# --- despliegue ------------------------------------------------------------
+/.github/workflows/         @ITL-ORG-INFRA/plataforma
+/scripts/                   @ITL-ORG-INFRA/plataforma

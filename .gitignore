@@ -1,0 +1,13 @@
+# Artefactos de construccion
+dist/
+.build/
+*.zip
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Sistema
+.DS_Store
