@@ -82,6 +82,38 @@ en secretos**. Hacen falta dos roles, creados por Terraform:
   Un rol acotado a `ref:refs/heads/main` se lo puede llevar cualquier job que
   corra en esa rama, aprobación incluida o no.
 
+### El `sub` lleva IDs numéricos, no sólo nombres
+
+La organización emite el claim `sub` con los identificadores inmutables de la
+organización y del repositorio incrustados:
+
+```
+repo:ITL-ORG-INFRA@186738147/intelica-proxy-ia@1343321907:environment:dev
+                  └─ org id ─┘                └─ repo id ─┘
+```
+
+Esto **obliga a usar `StringLike`**: un `StringEquals` contra
+`repo:ITL-ORG-INFRA/intelica-proxy-ia:environment:dev` no coincide nunca, y el
+sintoma es el peor posible — `Assuming role with OIDC` reintentandose una docena
+de veces sin decir por que.
+
+La condicion recomendada ancla los **IDs** y deja los nombres al comodin:
+
+```json
+"StringLike": {
+  "token.actions.githubusercontent.com:sub": "repo:*@186738147/*@1343321907:environment:dev"
+}
+```
+
+Anclar el ID y no el nombre tiene dos ventajas: sobrevive a un renombrado del
+repositorio o de la organizacion, y no depende de un nombre que, si algun dia se
+libera, puede tomar otro. El tramo `:environment:<entorno>` es el que separa dev
+de qa y de prod, y ese no se toca: sin el, cualquier job del repositorio podria
+asumir el rol de produccion saltandose la aprobacion.
+
+Si el formato cambia o hay dudas, el paso **Claims del token OIDC** del workflow
+de despliegue imprime el `sub` real antes de intentar asumir el rol.
+
 Permisos que necesitan ambos roles (y sólo estos):
 
 ```

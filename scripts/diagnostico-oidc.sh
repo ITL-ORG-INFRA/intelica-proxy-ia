@@ -158,7 +158,10 @@ while IFS= read -r rol; do
     dato "usa StringLike: admite comodines"
   else
     dato "usa StringEquals: el sub tiene que coincidir EXACTAMENTE"
-    dato "compara ese valor con el que imprime el workflow Diagnostico OIDC"
+    avisa "esta organizacion emite el sub con IDs numericos incrustados:"
+    dato "  repo:ORG@<id-org>/REPO@<id-repo>:environment:<entorno>"
+    dato "con StringEquals sobre los nombres a secas NO va a coincidir nunca"
+    dato "usa StringLike, p.ej. repo:*@<id-org>/*@<id-repo>:environment:dev"
   fi
 
   # --- tiene permisos, no solo confianza? ---
