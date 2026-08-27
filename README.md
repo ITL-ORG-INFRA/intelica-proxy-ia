@@ -237,6 +237,7 @@ llevan carpetas extra porque reutilizan los detectores: `verificador` y `fetcher
 
 | Documento | Para qué |
 |---|---|
+| [PARA-PRODUCTORES.md](docs/PARA-PRODUCTORES.md) | Guía para quien manda lotes. Es la que se pasa a los equipos |
 | [FRONTERA-CON-TERRAFORM.md](docs/FRONTERA-CON-TERRAFORM.md) | Quién manda sobre qué recurso, y qué exige el repo de Terraform |
 | [SOBRE-LOS-PANES-DE-PRUEBA.md](docs/SOBRE-LOS-PANES-DE-PRUEBA.md) | Por qué hay números de tarjeta en el repo y por qué no son datos reales |
 | [PROMPT-TERRAFORM.md](docs/PROMPT-TERRAFORM.md) | Especificación completa de la infraestructura |

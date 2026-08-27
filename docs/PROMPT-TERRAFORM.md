@@ -284,6 +284,22 @@ gestión de la organización) y tarda hasta 24 h en propagarse. Es un paso manua
 de Terraform; déjalo anotado en el README del módulo o quien mire el informe de costes
 la primera semana no verá nada y pensará que el etiquetado falló.
 
+## Permisos para los productores
+
+Los equipos que mandan lotes (p.ej. Cuotas) necesitan un permission set de
+Identity Center acotado. La política está en
+[PARA-PRODUCTORES.md](PARA-PRODUCTORES.md); lo que importa del diseño es:
+
+- **Escritura** en `raw/entrada/*` y `kms:GenerateDataKey` sobre CMK-raw.
+- **Lectura** en `clean/estado/*` y en `results/*`, con `kms:Decrypt` sólo sobre
+  **CMK-clean**.
+- **Nunca** lectura sobre `raw` ni `kms:Decrypt` sobre CMK-raw. Un productor que
+  pueda releer lo que subió es una vía de salida de CHD del CDE, y mete su
+  identidad en el alcance de la auditoría.
+
+El productor ve su lote *sanitizado* en `clean/`, no el original. Cubre la
+necesidad de "quiero ver lo que mandé" sin abrir el entorno protegido.
+
 ## Lo que NO hay que crear
 
 Está fuera del MVP a propósito. No lo añadas aunque parezca que falta:

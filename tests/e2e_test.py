@@ -94,9 +94,24 @@ def main():
         r = sanitizer.lambda_handler(evento_s3(RAW, "entrada/limpio.json"), Ctx())
         ck("estado limpio", r["estado"] == store.Status.LIMPIO, r)
         ck("5 peticiones limpias", r["limpias"] == 5, r)
-        ck("objeto escrito en clean", len(s3.claves(CLEAN)) == 1, s3.claves(CLEAN))
         ck("nada en cuarentena", len(s3.claves(QUAR)) == 0, s3.claves(QUAR))
         lote_limpio = r["batch_id"]
+
+        claves_clean = s3.claves(CLEAN)
+        ck("un solo lote en clean/",
+           [k for k in claves_clean if k.startswith("clean/")] == [f"clean/{lote_limpio}.json"],
+           claves_clean)
+        ck("el lote escrito en clean/", f"clean/{lote_limpio}.json" in claves_clean,
+           claves_clean)
+        ck("parte de estado escrito en estado/",
+           f"estado/{lote_limpio}.json" in claves_clean, claves_clean)
+
+        parte = json.loads(s3.objetos[(CLEAN, f"estado/{lote_limpio}.json")])
+        ck("el parte dice limpio", parte["estado"] == store.Status.LIMPIO, parte)
+        ck("conteos correctos",
+           parte["peticiones"] == {"recibidas": 5, "limpias": 5, "rechazadas": 0},
+           parte["peticiones"])
+        ck("el parte NO lleva el payload", "requests" not in parte, list(parte))
 
         print("\n[2] un PAN entre cinco -> el gate aborta el lote entero")
         doc = {"requests": [peticion(f"f-{i}", f"Documento {i}") for i in range(4)]
@@ -106,7 +121,9 @@ def main():
         r = sanitizer.lambda_handler(evento_s3(RAW, "entrada/conpan.json"), Ctx())
         ck("lote en cuarentena", r["estado"] == store.Status.CUARENTENA, r)
         ck("el motivo cita el gate", "gate" in r["motivo"], r["motivo"])
-        ck("las 4 limpias TAMPOCO cruzan", len(s3.claves(CLEAN)) == 1, s3.claves(CLEAN))
+        lotes_en_clean = [k for k in s3.claves(CLEAN) if k.startswith("clean/")]
+        ck("las 4 limpias TAMPOCO cruzan", lotes_en_clean == [f"clean/{lote_limpio}.json"],
+           lotes_en_clean)
         ck("informe en cuarentena", len(s3.claves(QUAR)) == 1, s3.claves(QUAR))
 
         informe = json.loads(s3.objetos[(QUAR, s3.claves(QUAR)[0])])
@@ -114,6 +131,23 @@ def main():
         ck("el informe apunta al raw", informe["origen"]["key"] == "entrada/conpan.json")
         ck("el informe no contiene el PAN",
            "4111111111111111" not in json.dumps(informe), "fuga en el informe")
+
+        # El productor no tiene acceso al CDE, asi que su unica via para saber
+        # que paso es el parte que queda fuera, en el bucket clean.
+        parte_rechazo = json.loads(s3.objetos[(CLEAN, f"estado/{r['batch_id']}.json")])
+        ck("hay parte de estado del lote rechazado",
+           parte_rechazo["estado"] == store.Status.CUARENTENA, parte_rechazo)
+        ck("el parte explica el motivo", "gate" in parte_rechazo["motivo"],
+           parte_rechazo["motivo"])
+        ck("el parte dice que capa disparo",
+           any("pan" in k for k in parte_rechazo["resumen_por_capa"]),
+           parte_rechazo["resumen_por_capa"])
+        ck("el parte incluye que hacer", len(parte_rechazo["que_hacer"]) >= 1,
+           parte_rechazo["que_hacer"])
+        ck("el parte NO contiene el PAN",
+           "4111111111111111" not in json.dumps(parte_rechazo), "fuga en el parte")
+        ck("el parte NO contiene el payload", "requests" not in parte_rechazo,
+           list(parte_rechazo))
 
         print("\n[3] SAD -> bloqueo duro, sin mirar el resto")
         doc = {"requests": [peticion("s-0", "banda ;4111111111111111=25121011000000000?")]

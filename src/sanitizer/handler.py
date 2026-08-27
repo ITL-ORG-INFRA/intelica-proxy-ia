@@ -26,7 +26,7 @@ from config import (
 )
 from detectors import Hallazgo, escanear_texto
 from envelope import EnvelopeInvalido, leer_raiz, normalizar_peticion
-from logs import get_logger
+from logs import get_logger, scrub
 from store import Status
 
 log = get_logger(__name__)
@@ -220,6 +220,9 @@ def lambda_handler(evento: Dict[str, Any], context: Any) -> Dict[str, Any]:
                  request_count=len(limpias), rechazadas=rechazadas,
                  sanitizado_en=store.now_iso())
 
+    _escribir_estado(lote, Status.LIMPIO, key, total, len(limpias),
+                     rechazos, todos, motivo="")
+
     ms = round((time.monotonic() - arranque) * 1000)
     _metrica("PeticionesLimpias", len(limpias))
     log.info("lote sanitizado", extra={
@@ -261,11 +264,95 @@ def _cuarentena(lote: str, bucket: str, key: str, tamano: int,
         store.create(lote, raw_key=f"{bucket}/{key}", request_count=total,
                      status=Status.CUARENTENA, motivo=motivo[:500])
 
+    _escribir_estado(lote, Status.CUARENTENA, key, total, 0, [], hallazgos, motivo)
+
     _metrica("LotesEnCuarentena", 1)
     log.error("lote en cuarentena", extra={
         "ctx_batch_id": lote, "ctx_motivo": motivo, "ctx_duro": duro,
         "ctx_hallazgos": len(hallazgos)})
     return {"batch_id": lote, "estado": Status.CUARENTENA, "motivo": motivo}
+
+
+#: que hacer segun lo que disparo. Sin esto el productor recibe un veredicto y
+#: ninguna pista, y acaba escribiendo a infraestructura en cada rechazo.
+_QUE_HACER = {
+    "pan": "Se detecto un numero de tarjeta en texto libre. Quitalo del origen: "
+           "el proxy no lo enmascara, lo bloquea.",
+    "sad_track": "Se detectaron datos de banda magnetica. Nunca son almacenables, "
+                 "ni cifrados. Revisa de donde salen esos registros.",
+    "sad_cvv": "Se detecto un CVV junto a palabras que lo identifican. "
+               "Los codigos de verificacion no pueden salir del entorno.",
+    "sad_pin": "Se detecto un PIN en contexto. Revisa el origen de los datos.",
+    "campo": "Un campo con nombre reservado (pan, cvv, track...) fue destruido. "
+             "Renombralo o quitalo del payload.",
+    "binario": "Se detecto contenido binario o base64. Solo se admite texto.",
+    "estructura": "El lote no cumple el esquema. Solo se permiten las claves "
+                  "documentadas: custom_id, params.model, params.max_tokens, "
+                  "params.messages, params.system.",
+}
+
+
+def _escribir_estado(lote: str, estado: str, key: str, recibidas: int,
+                     limpias: int, rechazos: List[Dict[str, Any]],
+                     hallazgos: List[Hallazgo], motivo: str) -> None:
+    """Deja un parte de estado que el productor SI puede leer.
+
+    Va al bucket clean, bajo 'estado/', por dos razones:
+
+      · clean esta fuera del CDE, asi que leerlo no exige la clave del CDE ni
+        mete a quien lo lea en el alcance PCI.
+      · el sanitizer ya escribe ahi, asi que no hace falta ampliarle permisos.
+
+    El prefijo 'estado/' no dispara al verificador, que escucha en 'clean/'.
+
+    Lo que va dentro son conteos, capas y rutas — nunca valores. Ademas se pasa
+    todo por el mismo scrub que protege los logs: este documento cruza la
+    frontera, y conviene que sea incapaz de llevar un PAN aunque alguien
+    introduzca un mensaje de error descuidado mas adelante.
+    """
+    detalle_rechazos = []
+    for rechazo in rechazos[:200]:
+        entrada = {"indice": rechazo.get("indice"), "motivo": rechazo.get("motivo")}
+        if rechazo.get("detalle"):
+            entrada["detalle"] = scrub(rechazo["detalle"])
+        if rechazo.get("hallazgos"):
+            entrada["hallazgos"] = [
+                {"capa": h["capa"], "tipo": h["tipo"],
+                 "donde": scrub(h["donde"]), "detalle": scrub(h["detalle"])}
+                for h in rechazo["hallazgos"]
+            ]
+        detalle_rechazos.append(entrada)
+
+    tipos = {h.tipo for h in hallazgos}
+    consejos = [_QUE_HACER[t] for t in sorted(tipos) if t in _QUE_HACER]
+
+    parte = {
+        "batch_id": lote,
+        "estado": estado,
+        "origen": key,
+        "peticiones": {
+            "recibidas": recibidas,
+            "limpias": limpias,
+            "rechazadas": len(rechazos),
+        },
+        "motivo": scrub(motivo) if motivo else "",
+        "rechazos": detalle_rechazos,
+        "resumen_por_capa": _resumen(hallazgos),
+        "que_hacer": consejos,
+        "actualizado_en": store.now_iso(),
+    }
+    if len(rechazos) > 200:
+        parte["nota"] = f"se listan 200 de {len(rechazos)} rechazos"
+
+    try:
+        _s3.put_object(
+            Bucket=CLEAN_BUCKET, Key=f"estado/{lote}.json",
+            Body=json.dumps(parte, ensure_ascii=False, indent=2).encode("utf-8"),
+            ContentType="application/json",
+            Metadata={"batch-id": lote, "estado": estado})
+    except Exception:  # noqa: BLE001 — informar no puede tumbar la sanitizacion
+        log.warning("no se pudo escribir el parte de estado",
+                    extra={"ctx_batch_id": lote})
 
 
 def _resumen(hallazgos: List[Hallazgo]) -> Dict[str, int]:
