@@ -190,6 +190,42 @@ timeout, concurrencia y variables de entorno son de Terraform.
 Salidas laterales: `cuarentena` (no cruza), `retenido` (no cabe en la cola),
 `expirado` (24 h), `fallido`.
 
+## Probar el filtro
+
+Once ficheros de ejemplo en [ejemplos/](ejemplos), uno por cada comportamiento
+del sanitizer. Se pueden pasar de dos formas.
+
+**En local, sin AWS** — segundos por iteración. Corre el handler real del
+sanitizer contra un S3 y un DynamoDB simulados, así que no puede divergir de lo
+que hace producción:
+
+```bash
+.venv/bin/python scripts/probar_filtro.py              # todos
+.venv/bin/python scripts/probar_filtro.py mi-lote.json --detalle
+```
+
+**Contra el pipeline desplegado** — sube a `raw`, calcula el `batch_id` igual
+que el sanitizer y espera el parte de estado:
+
+```bash
+./scripts/probar-flujo.sh dev
+./scripts/probar-flujo.sh dev ejemplos/02-pan-texto-libre.json
+```
+
+| Ejemplo | Qué ejercita |
+|---|---|
+| `01-limpio` | Pasa entero |
+| `02-pan-texto-libre` | Capa 3: Visa en texto |
+| `03-pan-evasion` | Capa 0: ancho completo, ancho cero, guion Unicode |
+| `04-sad-banda` | Capa 4: banda magnética → **aborta el lote** |
+| `05-sad-cvv` | Capa 4: CVV en contexto |
+| `06-binario` | Capa 5: PNG en base64 y `data:` URI |
+| `07-envelope-clave-extra` | Capa 1: deny-by-default |
+| `08-modelo-no-permitido` | Capa 1: lista blanca de modelos |
+| `09-custom-id-repetido` | Capa 1: duplicado |
+| `10-gate-no-salta` | 1 de 200 = 0,5 %: las 199 limpias **sí** cruzan |
+| `11-falsos-positivos` | UUID, hashes, importes: no disparan nada |
+
 ## Pruebas
 
 ```bash

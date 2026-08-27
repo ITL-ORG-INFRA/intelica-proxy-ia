@@ -1,0 +1,72 @@
+{
+  "requests": [
+    {
+      "custom_id": "fila-0",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Resume este expediente de reclamacion en tres lineas."
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "fila-1",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el motivo de baja: el cliente indica mudanza al extranjero."
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "fila-2",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Extrae la fecha de vencimiento mencionada: el pago vence el 15 de marzo."
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "fila-3",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "El importe pendiente asciende a 1.234,56 euros. Redondea a euros."
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "fila-4",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Telefono de contacto +34 600 123 456. Formatea en E.164."
+          }
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "caso": "todo limpio: debe cruzar entero"
+  }
+}

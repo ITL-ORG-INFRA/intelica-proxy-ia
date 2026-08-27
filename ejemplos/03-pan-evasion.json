@@ -1,0 +1,59 @@
+{
+  "requests": [
+    {
+      "custom_id": "full",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Pago con ４１１１１１１１１１１１１１１１ gracias"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "zero",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Numero 4111​1111​1111​1111"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "guion",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Tarjeta 4111‑1111‑1111‑1111"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "agrup",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Referencia 5555 5555 5555 4444"
+          }
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "caso": "capa 0: ancho completo, ancho cero, guion Unicode y agrupado"
+  }
+}

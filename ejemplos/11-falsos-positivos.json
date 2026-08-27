@@ -1,0 +1,98 @@
+{
+  "requests": [
+    {
+      "custom_id": "fp-0",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "El pedido 1234567890123456 sigue pendiente"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "fp-1",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Timestamp del evento: 20260825120000"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "fp-2",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Identificador interno 9999999999999999"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "fp-3",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Importe total 1234567.89 EUR"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "fp-4",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Referencia 550e8400-e29b-41d4-a716-446655440000"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "fp-5",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Necesito el pin del router de la oficina"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "fp-6",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "La factura 2026-0000123 del 25 de agosto"
+          }
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "caso": "numeros largos que NO son tarjetas: no deben disparar nada"
+  }
+}

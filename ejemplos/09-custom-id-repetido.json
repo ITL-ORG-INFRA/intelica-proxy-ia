@@ -1,0 +1,33 @@
+{
+  "requests": [
+    {
+      "custom_id": "mismo-id",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Primera peticion"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "mismo-id",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Segunda peticion con el mismo id"
+          }
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "caso": "capa 1: custom_id duplicado. Anthropic rechazaria el lote entero sin decir cual, asi que se valida antes"
+  }
+}

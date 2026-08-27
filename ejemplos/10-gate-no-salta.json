@@ -1,0 +1,2607 @@
+{
+  "requests": [
+    {
+      "custom_id": "ok-0",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 0"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-1",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 1"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-2",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 2"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-3",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 3"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-4",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 4"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-5",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 5"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-6",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 6"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-7",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 7"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-8",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 8"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-9",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 9"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-10",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 10"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-11",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 11"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-12",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 12"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-13",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 13"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-14",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 14"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-15",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 15"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-16",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 16"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-17",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 17"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-18",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 18"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-19",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 19"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-20",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 20"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-21",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 21"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-22",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 22"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-23",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 23"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-24",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 24"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-25",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 25"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-26",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 26"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-27",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 27"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-28",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 28"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-29",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 29"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-30",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 30"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-31",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 31"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-32",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 32"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-33",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 33"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-34",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 34"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-35",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 35"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-36",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 36"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-37",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 37"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-38",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 38"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-39",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 39"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-40",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 40"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-41",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 41"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-42",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 42"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-43",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 43"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-44",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 44"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-45",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 45"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-46",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 46"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-47",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 47"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-48",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 48"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-49",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 49"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-50",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 50"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-51",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 51"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-52",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 52"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-53",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 53"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-54",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 54"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-55",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 55"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-56",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 56"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-57",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 57"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-58",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 58"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-59",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 59"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-60",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 60"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-61",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 61"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-62",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 62"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-63",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 63"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-64",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 64"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-65",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 65"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-66",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 66"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-67",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 67"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-68",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 68"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-69",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 69"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-70",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 70"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-71",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 71"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-72",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 72"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-73",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 73"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-74",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 74"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-75",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 75"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-76",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 76"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-77",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 77"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-78",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 78"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-79",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 79"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-80",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 80"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-81",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 81"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-82",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 82"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-83",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 83"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-84",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 84"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-85",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 85"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-86",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 86"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-87",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 87"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-88",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 88"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-89",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 89"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-90",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 90"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-91",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 91"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-92",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 92"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-93",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 93"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-94",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 94"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-95",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 95"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-96",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 96"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-97",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 97"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-98",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 98"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-99",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 99"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-100",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 100"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-101",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 101"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-102",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 102"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-103",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 103"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-104",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 104"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-105",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 105"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-106",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 106"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-107",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 107"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-108",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 108"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-109",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 109"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-110",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 110"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-111",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 111"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-112",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 112"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-113",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 113"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-114",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 114"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-115",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 115"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-116",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 116"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-117",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 117"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-118",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 118"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-119",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 119"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-120",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 120"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-121",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 121"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-122",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 122"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-123",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 123"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-124",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 124"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-125",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 125"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-126",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 126"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-127",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 127"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-128",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 128"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-129",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 129"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-130",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 130"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-131",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 131"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-132",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 132"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-133",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 133"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-134",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 134"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-135",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 135"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-136",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 136"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-137",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 137"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-138",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 138"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-139",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 139"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-140",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 140"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-141",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 141"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-142",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 142"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-143",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 143"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-144",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 144"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-145",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 145"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-146",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 146"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-147",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 147"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-148",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 148"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-149",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 149"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-150",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 150"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-151",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 151"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-152",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 152"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-153",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 153"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-154",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 154"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-155",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 155"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-156",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 156"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-157",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 157"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-158",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 158"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-159",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 159"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-160",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 160"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-161",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 161"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-162",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 162"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-163",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 163"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-164",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 164"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-165",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 165"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-166",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 166"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-167",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 167"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-168",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 168"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-169",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 169"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-170",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 170"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-171",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 171"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-172",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 172"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-173",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 173"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-174",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 174"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-175",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 175"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-176",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 176"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-177",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 177"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-178",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 178"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-179",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 179"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-180",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 180"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-181",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 181"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-182",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 182"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-183",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 183"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-184",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 184"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-185",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 185"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-186",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 186"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-187",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 187"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-188",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 188"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-189",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 189"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-190",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 190"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-191",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 191"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-192",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 192"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-193",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 193"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-194",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 194"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-195",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 195"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-196",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 196"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-197",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 197"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-198",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica el caso numero 198"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "pan-1",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Cobro a la 5555555555554444"
+          }
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "caso": "1 de 200 = 0.50%, por debajo del umbral del 1%. Las 199 limpias SI cruzan; la mala se queda fuera"
+  }
+}

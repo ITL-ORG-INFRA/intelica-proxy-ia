@@ -14,7 +14,7 @@ import hashlib
 import json
 import os
 import time
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import boto3
 
@@ -174,7 +174,8 @@ def lambda_handler(evento: Dict[str, Any], context: Any) -> Dict[str, Any]:
                       extra={"ctx_batch_id": lote, "ctx_donde": duros[0].donde,
                              "ctx_detalle": duros[0].detalle})
             return _cuarentena(lote, bucket, key, tamano, todos, total,
-                               f"bloqueo duro en {ruta}: {duros[0].detalle}", duro=True)
+                               f"bloqueo duro en {ruta}: {duros[0].detalle}",
+                               duro=True, rechazos=rechazos)
 
         if hallazgos:
             todos.extend(hallazgos)
@@ -197,11 +198,12 @@ def lambda_handler(evento: Dict[str, Any], context: Any) -> Dict[str, Any]:
         return _cuarentena(
             lote, bucket, key, tamano, todos, total,
             f"gate: {rechazadas}/{total} rechazadas ({porcentaje:.2f}%) "
-            f"supera el umbral ({GATE_REJECT_PCT}% o {GATE_REJECT_ABS} absolutas)")
+            f"supera el umbral ({GATE_REJECT_PCT}% o {GATE_REJECT_ABS} absolutas)",
+            rechazos=rechazos)
 
     if not limpias:
         return _cuarentena(lote, bucket, key, tamano, todos, total,
-                           "no queda ninguna peticion limpia")
+                           "no queda ninguna peticion limpia", rechazos=rechazos)
 
     # --- a la zona limpia ---------------------------------------------------
     clean_key = f"clean/{lote}.json"
@@ -235,7 +237,8 @@ def lambda_handler(evento: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
 def _cuarentena(lote: str, bucket: str, key: str, tamano: int,
                 hallazgos: List[Hallazgo], total: int, motivo: str,
-                duro: bool = False) -> Dict[str, Any]:
+                duro: bool = False,
+                rechazos: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
     """Deja constancia en cuarentena y no cruza nada.
 
     El informe guarda PUNTEROS al objeto raw, no una copia. Copiar el payload
@@ -264,7 +267,10 @@ def _cuarentena(lote: str, bucket: str, key: str, tamano: int,
         store.create(lote, raw_key=f"{bucket}/{key}", request_count=total,
                      status=Status.CUARENTENA, motivo=motivo[:500])
 
-    _escribir_estado(lote, Status.CUARENTENA, key, total, 0, [], hallazgos, motivo)
+    # Los rechazos viajan al parte: sin ellos el productor lee "rechazadas: 0"
+    # junto a un motivo que dice "1/3 rechazadas", y no sabe que peticion mirar.
+    _escribir_estado(lote, Status.CUARENTENA, key, total, 0,
+                     rechazos or [], hallazgos, motivo)
 
     _metrica("LotesEnCuarentena", 1)
     log.error("lote en cuarentena", extra={

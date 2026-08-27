@@ -1,0 +1,397 @@
+{
+  "requests": [
+    {
+      "custom_id": "sad-1",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Volcado: ;4111111111111111=25121011000000000?"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-1",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Peticion inofensiva numero 1"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-2",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Peticion inofensiva numero 2"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-3",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Peticion inofensiva numero 3"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-4",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Peticion inofensiva numero 4"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-5",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Peticion inofensiva numero 5"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-6",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Peticion inofensiva numero 6"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-7",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Peticion inofensiva numero 7"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-8",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Peticion inofensiva numero 8"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-9",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Peticion inofensiva numero 9"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-10",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Peticion inofensiva numero 10"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-11",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Peticion inofensiva numero 11"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-12",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Peticion inofensiva numero 12"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-13",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Peticion inofensiva numero 13"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-14",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Peticion inofensiva numero 14"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-15",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Peticion inofensiva numero 15"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-16",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Peticion inofensiva numero 16"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-17",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Peticion inofensiva numero 17"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-18",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Peticion inofensiva numero 18"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-19",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Peticion inofensiva numero 19"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-20",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Peticion inofensiva numero 20"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-21",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Peticion inofensiva numero 21"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-22",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Peticion inofensiva numero 22"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-23",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Peticion inofensiva numero 23"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-24",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Peticion inofensiva numero 24"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-25",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Peticion inofensiva numero 25"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-26",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Peticion inofensiva numero 26"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-27",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Peticion inofensiva numero 27"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-28",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Peticion inofensiva numero 28"
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ok-29",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Peticion inofensiva numero 29"
+          }
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "caso": "capa 4: banda magnetica. BLOQUEO DURO: aborta el lote entero, aunque las otras 29 esten limpias"
+  }
+}

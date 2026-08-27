@@ -78,10 +78,17 @@ def prueba_falsos_positivos():
         ("telefono",            "+34 600 123 456"),
         ("importe",             "1234567.89 EUR"),
         ("uuid",                "550e8400-e29b-41d4-a716-446655440000"),
+        ("uuid en frase",       "Referencia 550e8400-e29b-41d4-a716-446655440000 del caso"),
+        ("hash sha256",         "a" * 64),
+        ("token opaco",         "eyJhbGciOiJIUzI1NiJ9abcdefghijklmnop"),
     ]
     for nombre, texto in casos:
-        hallazgos = find_pans(texto, "t")
-        ck(nombre, len(hallazgos) == 0, [h.detalle for h in hallazgos])
+        # Con escanear_texto, no con find_pans: el UUID no disparaba la capa 3
+        # pero si la 5, porque encaja con el alfabeto base64url. Probar solo
+        # una capa dejaba pasar el falso positivo.
+        hallazgos = escanear_texto(texto, "t")
+        ck(nombre, len(hallazgos) == 0,
+           [(h.capa, h.tipo, h.detalle) for h in hallazgos])
 
 
 def prueba_evasiones():

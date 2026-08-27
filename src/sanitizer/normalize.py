@@ -40,6 +40,12 @@ _SEPARATORS = {
     0x00A0: " ", 0x2007: " ", 0x202F: " ", 0x2009: " ", 0x2002: " ", 0x2003: " ",
 }
 
+#: forma de UUID: encaja con el alfabeto base64url (que admite '-') y aparece
+#: en casi cualquier payload real. No es un adjunto escondido.
+_UUID = re.compile(
+    r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
+    r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
+
 #: candidato a base64: suficientemente largo para esconder algo
 _B64 = re.compile(r"(?:[A-Za-z0-9+/]{4}){8,}(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?")
 _B64URL = re.compile(r"(?:[A-Za-z0-9_-]{4}){8,}(?:[A-Za-z0-9_-]{2}==|[A-Za-z0-9_-]{3}=)?")
@@ -83,6 +89,8 @@ def decode_base64_blobs(text: str, max_blobs: int = 64) -> List[Tuple[str, bytes
             blob = match.group(0)
             if blob in seen or len(found) >= max_blobs:
                 continue
+            if _UUID.match(blob):
+                continue
             seen.add(blob)
             padded = blob + "=" * (-len(blob) % 4)
             try:
@@ -98,18 +106,21 @@ def decode_base64_blobs(text: str, max_blobs: int = 64) -> List[Tuple[str, bytes
 
 
 def sniff_binary(data: bytes) -> str:
-    """Nombra el formato si los primeros bytes delatan un binario."""
+    """Nombra el formato solo si los primeros bytes delatan un binario conocido.
+
+    Antes bastaba con que lo decodificado no fuera UTF-8 valido para llamarlo
+    binario. Eso daba falsos positivos constantes: cualquier cadena que encaje
+    por casualidad con el alfabeto base64 —un UUID, un hash, un identificador—
+    decodifica a bytes aleatorios que no son texto.
+
+    La capa 5 existe para cazar imagenes y documentos colados en base64, y esos
+    llevan cabecera. Lo que no la tiene se sigue escaneando como texto por las
+    capas 3 y 4, que es donde importa: un PAN escondido en base64 se detecta
+    igual.
+    """
     for magic, name in _MAGIC.items():
         if data.startswith(magic):
             return name
-    # Sin cabecera conocida: se considera binario si no es texto legible.
-    sample = data[:512]
-    if b"\x00" in sample:
-        return "binario"
-    try:
-        sample.decode("utf-8")
-    except UnicodeDecodeError:
-        return "binario"
     return ""
 
 
