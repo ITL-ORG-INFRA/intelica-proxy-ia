@@ -1,0 +1,21 @@
+{
+  "requests": [
+    {
+      "custom_id": "p-1",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "system": "Contexto: la tarjeta de referencia es 4111111111111111.",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Resume el caso."
+          }
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "caso": "PAN en el system block, no en el mensaje"
+  }
+}

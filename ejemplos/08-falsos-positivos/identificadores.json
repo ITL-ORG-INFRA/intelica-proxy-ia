@@ -47,7 +47,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Importe total 1234567.89 EUR"
+            "content": "Referencia 550e8400-e29b-41d4-a716-446655440000"
           }
         ]
       }
@@ -60,39 +60,13 @@
         "messages": [
           {
             "role": "user",
-            "content": "Referencia 550e8400-e29b-41d4-a716-446655440000"
-          }
-        ]
-      }
-    },
-    {
-      "custom_id": "fp-5",
-      "params": {
-        "model": "claude-sonnet-4-5",
-        "max_tokens": 256,
-        "messages": [
-          {
-            "role": "user",
-            "content": "Necesito el pin del router de la oficina"
-          }
-        ]
-      }
-    },
-    {
-      "custom_id": "fp-6",
-      "params": {
-        "model": "claude-sonnet-4-5",
-        "max_tokens": 256,
-        "messages": [
-          {
-            "role": "user",
-            "content": "La factura 2026-0000123 del 25 de agosto"
+            "content": "Hash del fichero: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
           }
         ]
       }
     }
   ],
   "metadata": {
-    "caso": "numeros largos que NO son tarjetas: no deben disparar nada"
+    "caso": "16 digitos sin Luhn, timestamps, UUID, hashes"
   }
 }

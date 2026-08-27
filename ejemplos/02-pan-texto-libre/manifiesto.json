@@ -1,0 +1,56 @@
+{
+  "suite": "Capa 3 — PAN en texto libre",
+  "descripcion": "Numero de tarjeta suelto en el contenido. Rechaza la peticion; el gate decide el lote.",
+  "casos": [
+    {
+      "fichero": "visa-contiguo.json",
+      "peticiones": 1,
+      "por_que": "Visa de 16 digitos seguidos",
+      "esperado": "cuarentena",
+      "capas": [
+        3
+      ],
+      "rechazadas": 1
+    },
+    {
+      "fichero": "mastercard-agrupada.json",
+      "peticiones": 1,
+      "por_que": "Mastercard en grupos de cuatro",
+      "esperado": "cuarentena",
+      "capas": [
+        3
+      ],
+      "rechazadas": 1
+    },
+    {
+      "fichero": "amex-guiones.json",
+      "peticiones": 1,
+      "por_que": "Amex de 15 digitos con guiones",
+      "esperado": "cuarentena",
+      "capas": [
+        3
+      ],
+      "rechazadas": 1
+    },
+    {
+      "fichero": "en-medio-de-un-parrafo.json",
+      "peticiones": 1,
+      "por_que": "PAN enterrado en texto largo",
+      "esperado": "cuarentena",
+      "capas": [
+        3
+      ],
+      "rechazadas": 1
+    },
+    {
+      "fichero": "en-el-system.json",
+      "peticiones": 1,
+      "por_que": "PAN en el system block, no en el mensaje",
+      "esperado": "cuarentena",
+      "capas": [
+        3
+      ],
+      "rechazadas": 1
+    }
+  ]
+}

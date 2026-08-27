@@ -1,0 +1,21 @@
+{
+  "requests": [
+    {
+      "custom_id": "x-1",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Resume esto"
+          }
+        ]
+      }
+    }
+  ],
+  "campo_inventado": 1,
+  "metadata": {
+    "caso": "clave desconocida en la raiz: ni se lee el lote"
+  }
+}

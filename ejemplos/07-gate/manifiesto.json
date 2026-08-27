@@ -1,0 +1,34 @@
+{
+  "suite": "El gate de lote",
+  "descripcion": "Con el umbral al 1%: por debajo pasan las limpias, por encima cae el lote entero.",
+  "casos": [
+    {
+      "fichero": "bajo-umbral.json",
+      "peticiones": 200,
+      "por_que": "1 de 200 = 0.50%: las 199 limpias SI cruzan",
+      "esperado": "limpio",
+      "limpias": 199,
+      "rechazadas": 1
+    },
+    {
+      "fichero": "sobre-umbral.json",
+      "peticiones": 100,
+      "por_que": "5 de 100 = 5%: el lote entero cae",
+      "esperado": "cuarentena",
+      "capas": [
+        3
+      ],
+      "rechazadas": 5
+    },
+    {
+      "fichero": "justo-en-el-limite.json",
+      "peticiones": 100,
+      "por_que": "1 de 100 = 1.00%: alcanza el umbral, asi que cae",
+      "esperado": "cuarentena",
+      "capas": [
+        3
+      ],
+      "rechazadas": 1
+    }
+  ]
+}

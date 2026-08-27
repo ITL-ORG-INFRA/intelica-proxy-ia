@@ -1,0 +1,20 @@
+{
+  "requests": [
+    {
+      "custom_id": "p-1",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Segun el expediente, el titular indico que el cargo de 240,50 EUR se hizo contra la tarjeta 4012888888881881 el dia 3, y solicita su devolucion."
+          }
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "caso": "PAN enterrado en texto largo"
+  }
+}

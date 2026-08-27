@@ -1,0 +1,22 @@
+{
+  "suite": "Lo que NO debe dispararse",
+  "descripcion": "Numeros largos e identificadores que aparecen en datos reales. Si alguno cae, el filtro es demasiado agresivo.",
+  "casos": [
+    {
+      "fichero": "identificadores.json",
+      "peticiones": 5,
+      "por_que": "16 digitos sin Luhn, timestamps, UUID, hashes",
+      "esperado": "limpio",
+      "limpias": 5,
+      "rechazadas": 0
+    },
+    {
+      "fichero": "importes-y-telefonos.json",
+      "peticiones": 5,
+      "por_que": "importes, telefonos, IBAN y 'pin' sin numero cerca",
+      "esperado": "limpio",
+      "limpias": 5,
+      "rechazadas": 0
+    }
+  ]
+}

@@ -1,59 +1,72 @@
 {
   "requests": [
     {
-      "custom_id": "full",
+      "custom_id": "f-0",
       "params": {
         "model": "claude-sonnet-4-5",
         "max_tokens": 256,
         "messages": [
           {
             "role": "user",
-            "content": "Pago con ４１１１１１１１１１１１１１１１ gracias"
+            "content": "Resume en tres lineas el motivo de la reclamacion."
           }
         ]
       }
     },
     {
-      "custom_id": "zero",
+      "custom_id": "f-1",
       "params": {
         "model": "claude-sonnet-4-5",
         "max_tokens": 256,
         "messages": [
           {
             "role": "user",
-            "content": "Numero 4111​1111​1111​1111"
+            "content": "Clasifica la urgencia: alta, media o baja."
           }
         ]
       }
     },
     {
-      "custom_id": "guion",
+      "custom_id": "f-2",
       "params": {
         "model": "claude-sonnet-4-5",
         "max_tokens": 256,
         "messages": [
           {
             "role": "user",
-            "content": "Tarjeta 4111‑1111‑1111‑1111"
+            "content": "Extrae la fecha de vencimiento del texto adjunto."
           }
         ]
       }
     },
     {
-      "custom_id": "agrup",
+      "custom_id": "f-3",
       "params": {
         "model": "claude-sonnet-4-5",
         "max_tokens": 256,
         "messages": [
           {
             "role": "user",
-            "content": "Referencia 5555 5555 5555 4444"
+            "content": "Indica si el cliente pide baja, cambio de titular o revision."
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "f-4",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Redacta una respuesta breve confirmando recepcion."
           }
         ]
       }
     }
   ],
   "metadata": {
-    "caso": "capa 0: ancho completo, ancho cero, guion Unicode y agrupado"
+    "caso": "prompts de trabajo corrientes"
   }
 }

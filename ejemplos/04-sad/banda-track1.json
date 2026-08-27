@@ -1,0 +1,20 @@
+{
+  "requests": [
+    {
+      "custom_id": "s-1",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "%B4111111111111111^PEREZ/ANA^25121011000000000000?"
+          }
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "caso": "track1 completo"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "requests": [
+    {
+      "custom_id": "s-1",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 512,
+        "system": "Eres un analista de reclamaciones. Responde en JSON.",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Clasifica: el cliente no recibio el pedido."
+          }
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "caso": "campo system, que si esta permitido"
+  }
+}

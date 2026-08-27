@@ -1,0 +1,29 @@
+{
+  "requests": [
+    {
+      "custom_id": "b-1",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Primera parte del expediente."
+              },
+              {
+                "type": "text",
+                "text": "Segunda parte del expediente."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "caso": "content como lista de bloques de texto"
+  }
+}

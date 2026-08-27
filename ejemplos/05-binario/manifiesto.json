@@ -1,0 +1,46 @@
+{
+  "suite": "Capa 5 — binario embebido",
+  "descripcion": "Imagenes y documentos colados como texto. Solo se admite texto plano.",
+  "casos": [
+    {
+      "fichero": "png-en-base64.json",
+      "peticiones": 1,
+      "por_que": "PNG con su cabecera dentro de base64",
+      "esperado": "cuarentena",
+      "capas": [
+        5
+      ],
+      "rechazadas": 1
+    },
+    {
+      "fichero": "pdf-en-base64.json",
+      "peticiones": 1,
+      "por_que": "PDF en base64",
+      "esperado": "cuarentena",
+      "capas": [
+        5
+      ],
+      "rechazadas": 1
+    },
+    {
+      "fichero": "data-uri.json",
+      "peticiones": 1,
+      "por_que": "data: URI",
+      "esperado": "cuarentena",
+      "capas": [
+        5
+      ],
+      "rechazadas": 1
+    },
+    {
+      "fichero": "bloque-image.json",
+      "peticiones": 1,
+      "por_que": "bloque de tipo image: no cruza la frontera",
+      "esperado": "cuarentena",
+      "capas": [
+        5
+      ],
+      "rechazadas": 1
+    }
+  ]
+}

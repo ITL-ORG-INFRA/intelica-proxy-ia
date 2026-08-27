@@ -121,6 +121,14 @@ def normalizar_peticion(peticion: Any, indice: int,
         raise EnvelopeInvalido(
             f"{ruta}.custom_id: solo alfanumerico, guion y guion bajo — debe ser opaco")
 
+    # El custom_id viaja a Anthropic tal cual, asi que hay que escanearlo como
+    # cualquier otro texto. Validar solo el juego de caracteres no basta: un PAN
+    # es alfanumerico, de modo que "4111111111111111" era un custom_id
+    # perfectamente valido que cruzaba la frontera sin que ninguna capa lo
+    # mirase. Todo lo que sale tiene que pasar por el filtro, no solo lo que
+    # parece contenido.
+    textos.append((f"{ruta}.custom_id", normalize(custom_id)))
+
     params = peticion.get("params")
     if not isinstance(params, dict):
         raise EnvelopeInvalido(f"{ruta}.params: se esperaba un objeto")

@@ -192,39 +192,52 @@ Salidas laterales: `cuarentena` (no cruza), `retenido` (no cabe en la cola),
 
 ## Probar el filtro
 
-Once ficheros de ejemplo en [ejemplos/](ejemplos), uno por cada comportamiento
-del sanitizer. Se pueden pasar de dos formas.
+En [ejemplos/](ejemplos) hay 33 lotes repartidos en ocho suites. Cada carpeta
+lleva un `manifiesto.json` que **declara qué debería pasar** con cada fichero, así
+que la batería vale como prueba de aceptación y no sólo como demostración.
+
+| Suite | Qué cubre |
+|---|---|
+| `01-limpios` | Debe pasar entero: texto normal, `system`, bloques de texto |
+| `02-pan-texto-libre` | Capa 3: Visa, Mastercard, Amex, PAN enterrado en un párrafo, PAN en el `system` |
+| `03-evasiones` | Capa 0: ancho completo, ancho cero, guion suave, guion Unicode, base64 |
+| `04-sad` | Capa 4: track1, track2, CVV, PIN → **abortan el lote entero** |
+| `05-binario` | Capa 5: PNG, PDF, `data:` URI, bloque `image` |
+| `06-envelope` | Capa 1: claves extra, modelo, `custom_id` duplicado / con PAN, rol inválido |
+| `07-gate` | Por debajo, por encima y justo en el umbral del 1 % |
+| `08-falsos-positivos` | UUID, hashes, IBAN, teléfonos, importes: no disparan nada |
 
 **En local, sin AWS** — segundos por iteración. Corre el handler real del
 sanitizer contra un S3 y un DynamoDB simulados, así que no puede divergir de lo
 que hace producción:
 
 ```bash
-.venv/bin/python scripts/probar_filtro.py              # todos
+.venv/bin/python scripts/probar_filtro.py                  # las ocho suites
+.venv/bin/python scripts/probar_filtro.py ejemplos/04-sad  # una
 .venv/bin/python scripts/probar_filtro.py mi-lote.json --detalle
 ```
 
-**Contra el pipeline desplegado** — sube a `raw`, calcula el `batch_id` igual
-que el sanitizer y espera el parte de estado:
+**Contra el pipeline desplegado** — sube a `raw`, calcula el `batch_id` igual que
+el sanitizer, espera el parte de estado y lo compara con el manifiesto:
 
 ```bash
 ./scripts/probar-flujo.sh dev
-./scripts/probar-flujo.sh dev ejemplos/02-pan-texto-libre.json
+./scripts/probar-flujo.sh dev ejemplos/04-sad
 ```
 
-| Ejemplo | Qué ejercita |
-|---|---|
-| `01-limpio` | Pasa entero |
-| `02-pan-texto-libre` | Capa 3: Visa en texto |
-| `03-pan-evasion` | Capa 0: ancho completo, ancho cero, guion Unicode |
-| `04-sad-banda` | Capa 4: banda magnética → **aborta el lote** |
-| `05-sad-cvv` | Capa 4: CVV en contexto |
-| `06-binario` | Capa 5: PNG en base64 y `data:` URI |
-| `07-envelope-clave-extra` | Capa 1: deny-by-default |
-| `08-modelo-no-permitido` | Capa 1: lista blanca de modelos |
-| `09-custom-id-repetido` | Capa 1: duplicado |
-| `10-gate-no-salta` | 1 de 200 = 0,5 %: las 199 limpias **sí** cruzan |
-| `11-falsos-positivos` | UUID, hashes, importes: no disparan nada |
+Las suites `04-sad` disparan la alarma `BloqueoDuro`. Es correcto, pero avisa a
+quien reciba las alarmas antes de lanzarlas.
+
+**Volumen**, para ver el gate a escala:
+
+```bash
+.venv/bin/python scripts/generar-lotes.py --ficheros 20 --peticiones 500 --sucio 0.5
+./scripts/probar-flujo.sh dev carga/*.json
+```
+
+`--desde-jsonl datos.jsonl` convierte datos reales al envelope. (La **entrada**
+del proxy es JSON con un array `requests`; JSONL es el formato de los
+**resultados**.)
 
 ## Pruebas
 

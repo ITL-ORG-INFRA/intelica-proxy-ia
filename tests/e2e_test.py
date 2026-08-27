@@ -174,6 +174,24 @@ def main():
         ck("clave desconocida en la raiz -> cuarentena",
            r["estado"] == store.Status.CUARENTENA, r)
 
+        print("\n[4b] el custom_id tambien se escanea")
+        # Regresion: el custom_id viaja a Anthropic tal cual, pero solo se
+        # validaba su juego de caracteres. Un PAN es alfanumerico, asi que era
+        # un custom_id valido y cruzaba la frontera sin pasar por ninguna capa.
+        doc = {"requests": [{"custom_id": "4111111111111111", "params": {
+            "model": "claude-sonnet-4-5", "max_tokens": 10,
+            "messages": [{"role": "user", "content": "contenido perfectamente limpio"}]}}]}
+        s3.put_object(Bucket=RAW, Key="entrada/cid.json", Body=json.dumps(doc).encode())
+        r = sanitizer.lambda_handler(evento_s3(RAW, "entrada/cid.json"), Ctx())
+        ck("PAN en el custom_id -> cuarentena",
+           r["estado"] == store.Status.CUARENTENA, r)
+        parte_cid = json.loads(s3.objetos[(CLEAN, f"estado/{r['batch_id']}.json")])
+        ck("el hallazgo apunta al custom_id",
+           any("custom_id" in h.get("donde", "")
+               for rz in parte_cid.get("rechazos", [])
+               for h in rz.get("hallazgos", [])),
+           parte_cid.get("rechazos"))
+
         print("\n[5] modelo fuera de la lista blanca")
         doc = {"requests": [peticion("z", "hola", modelo="gpt-4")]}
         s3.put_object(Bucket=RAW, Key="entrada/modelo.json", Body=json.dumps(doc).encode())

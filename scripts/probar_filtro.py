@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
-"""Pasa un lote por el filtro SIN tocar AWS.
+"""Pasa lotes por el filtro SIN tocar AWS, y comprueba el resultado esperado.
 
-Corre el handler real del sanitizer contra un S3 y un DynamoDB simulados en
-memoria. No es una reimplementacion del filtro: es el mismo codigo que corre en
-Lambda, con las seis capas y el gate, asi que no puede divergir de produccion.
+Corre el handler real del sanitizer contra un S3 y un DynamoDB simulados. No
+reimplementa el filtro: importa el mismo codigo que corre en Lambda, con las
+seis capas y el gate, asi que no puede divergir de produccion.
 
-Sirve para iterar en segundos en vez de en minutos, y para meterlo en un
-pre-commit si algun equipo quiere validar sus lotes antes de subirlos.
+Cada carpeta de ejemplos/ lleva un manifiesto.json que declara que deberia
+pasar con cada fichero. Esto lo verifica, asi que la bateria vale como prueba
+de aceptacion y no solo como demostracion.
 
-    ./scripts/probar_filtro.py                          todos los ejemplos
-    ./scripts/probar_filtro.py mi-lote.json             uno tuyo
-    ./scripts/probar_filtro.py --detalle lote.json      con todos los hallazgos
+    ./scripts/probar_filtro.py                     todas las suites
+    ./scripts/probar_filtro.py ejemplos/04-sad     una suite
+    ./scripts/probar_filtro.py mi-lote.json        un fichero suelto
+    ./scripts/probar_filtro.py --detalle ...       con todos los hallazgos
 
-Devuelve 1 si algun lote acaba en cuarentena.
+Devuelve 1 si algo no coincide con lo esperado.
 """
 import json
 import os
@@ -34,8 +36,7 @@ os.environ.update({
     "CLEAN_BUCKET": CLEAN, "RESULTS_BUCKET": RES,
     "BATCHES_TABLE": "sim-batches",
     "ANTHROPIC_SECRET_ARN": "arn:aws:secretsmanager:eu-south-2:0:secret:simulado",
-    "LOG_LEVEL": "CRITICAL",
-    "ENVIRONMENT": "local",
+    "LOG_LEVEL": "CRITICAL", "ENVIRONMENT": "local",
 })
 # Los mismos valores que el entorno real, salvo que se sobreescriban fuera.
 os.environ.setdefault(
@@ -50,20 +51,77 @@ else:
     R = B = D = VERDE = ROJO = AMBAR = AZUL = ""
 
 
+def suites_y_sueltos(rutas):
+    """Separa lo que son carpetas con manifiesto de lo que son ficheros sueltos."""
+    suites, sueltos = [], []
+    for ruta in rutas:
+        if os.path.isdir(ruta):
+            manifiesto = os.path.join(ruta, "manifiesto.json")
+            if os.path.isfile(manifiesto):
+                suites.append(ruta)
+            else:
+                sueltos.extend(sorted(
+                    os.path.join(ruta, f) for f in os.listdir(ruta)
+                    if f.endswith(".json")))
+        else:
+            sueltos.append(ruta)
+    return suites, sueltos
+
+
+def comparar(parte, esperado):
+    """Devuelve la lista de discrepancias entre el parte real y lo declarado."""
+    fallos = []
+
+    if esperado.get("esperado") and parte["estado"] != esperado["esperado"]:
+        fallos.append(f"estado {parte['estado']!r}, se esperaba {esperado['esperado']!r}")
+
+    for campo in ("limpias", "rechazadas"):
+        if campo in esperado and parte["peticiones"][campo] != esperado[campo]:
+            fallos.append(
+                f"{campo}={parte['peticiones'][campo]}, se esperaba {esperado[campo]}")
+
+    if "capas" in esperado:
+        vistas = {int(k[4]) for k in parte.get("resumen_por_capa", {}) if k.startswith("capa")}
+        faltan = set(esperado["capas"]) - vistas
+        if faltan:
+            fallos.append(f"no disparo la capa {sorted(faltan)}; disparo {sorted(vistas)}")
+
+    if esperado.get("duro") and "bloqueo duro" not in parte.get("motivo", ""):
+        fallos.append("se esperaba bloqueo duro y el motivo no lo menciona")
+
+    return fallos
+
+
+def imprimir(parte, detalle):
+    conteos = parte["peticiones"]
+    marca = f"{VERDE}limpio{R}" if parte["estado"] == "limpio" else f"{ROJO}cuarentena{R}"
+    print(f"        {marca}  recibidas={conteos['recibidas']} "
+          f"limpias={conteos['limpias']} rechazadas={conteos['rechazadas']}")
+    if parte.get("motivo"):
+        print(f"        {D}{parte['motivo'][:100]}{R}")
+    for capa, cuantos in sorted(parte.get("resumen_por_capa", {}).items()):
+        print(f"        {D}{capa}: {cuantos}{R}")
+    if detalle:
+        for rechazo in parte.get("rechazos", []):
+            for h in rechazo.get("hallazgos", []) or [{"detalle": rechazo.get("detalle", "")}]:
+                print(f"        {D}requests[{rechazo.get('indice')}] "
+                      f"{h.get('tipo', '')} {h.get('detalle', '')}{R}")
+
+
 def main(argv):
     detalle = "--detalle" in argv
-    ficheros = [a for a in argv if not a.startswith("--")]
-
-    if not ficheros:
-        carpeta = os.path.join(RAIZ, "ejemplos")
-        if not os.path.isdir(carpeta):
-            print("no hay ejemplos/ y no diste ningun fichero", file=sys.stderr)
+    rutas = [a for a in argv if not a.startswith("--")]
+    if not rutas:
+        base = os.path.join(RAIZ, "ejemplos")
+        if not os.path.isdir(base):
+            print("no existe ejemplos/ y no diste ninguna ruta", file=sys.stderr)
             return 2
-        ficheros = sorted(os.path.join(carpeta, f)
-                          for f in os.listdir(carpeta) if f.endswith(".json"))
+        rutas = sorted(os.path.join(base, d) for d in os.listdir(base)
+                       if os.path.isdir(os.path.join(base, d)))
+
+    suites, sueltos = suites_y_sueltos(rutas)
 
     from dobles import FakeCloudWatch, FakeResource, FakeS3, FakeTable
-
     s3, tabla, cw = FakeS3(), FakeTable(), FakeCloudWatch()
     paquete = tempfile.mkdtemp()
     for sub in ("common", "sanitizer"):
@@ -73,7 +131,7 @@ def main(argv):
     def cliente(servicio, **_kw):
         return {"s3": s3, "cloudwatch": cw}[servicio]
 
-    limpios = cuarentena = 0
+    ok = fallidos = 0
     try:
         with mock.patch("boto3.client", side_effect=cliente), \
              mock.patch("boto3.resource", return_value=FakeResource(tabla)):
@@ -85,72 +143,64 @@ def main(argv):
                 def get_remaining_time_in_millis(self):
                     return 900_000
 
-            for ruta in ficheros:
-                nombre = os.path.basename(ruta)
-                try:
-                    with open(ruta, "rb") as fichero:
-                        crudo = fichero.read()
-                    documento = json.loads(crudo)
-                except (OSError, json.JSONDecodeError) as exc:
-                    print(f"\n{AZUL}==>{R} {B}{nombre}{R}")
-                    print(f"    {ROJO}✗{R} no se pudo leer: {exc}")
-                    cuarentena += 1
-                    continue
-
-                print(f"\n{AZUL}==>{R} {B}{nombre}{R}")
-                caso = (documento.get("metadata") or {}).get("caso")
-                if caso:
-                    print(f"    {D}·{R} {caso}")
-                n = len(documento.get("requests", []))
-                print(f"    {D}·{R} peticiones: {n}")
-
+            def pasar(ruta, nombre):
+                with open(ruta, "rb") as fichero:
+                    crudo = fichero.read()
                 clave = f"entrada/{nombre}"
                 s3.put_object(Bucket=RAW, Key=clave, Body=crudo)
                 evento = {"source": "aws.s3",
                           "detail": {"bucket": {"name": RAW},
                                      "object": {"key": clave, "etag": nombre}}}
                 resultado = handler.lambda_handler(evento, Ctx())
-                lote = resultado["batch_id"]
+                return json.loads(
+                    s3.objetos[(CLEAN, f"estado/{resultado['batch_id']}.json")])
 
-                parte = json.loads(s3.objetos[(CLEAN, f"estado/{lote}.json")])
-                _imprimir(parte, detalle)
-                if parte["estado"] == "limpio":
-                    limpios += 1
-                else:
-                    cuarentena += 1
+            for carpeta in suites:
+                with open(os.path.join(carpeta, "manifiesto.json"), encoding="utf-8") as f:
+                    manifiesto = json.load(f)
+                print(f"\n{AZUL}==>{R} {B}{manifiesto['suite']}{R}")
+                print(f"    {D}{manifiesto['descripcion']}{R}")
+
+                for caso in manifiesto["casos"]:
+                    ruta = os.path.join(carpeta, caso["fichero"])
+                    try:
+                        parte = pasar(ruta, f"{os.path.basename(carpeta)}-{caso['fichero']}")
+                    except Exception as exc:  # noqa: BLE001
+                        print(f"    {ROJO}✗{R} {caso['fichero']:32} excepcion: {exc}")
+                        fallidos += 1
+                        continue
+
+                    discrepancias = comparar(parte, caso)
+                    if discrepancias:
+                        print(f"    {ROJO}✗{R} {caso['fichero']:32} {caso['por_que']}")
+                        for d in discrepancias:
+                            print(f"        {ROJO}{d}{R}")
+                        imprimir(parte, True)
+                        fallidos += 1
+                    else:
+                        print(f"    {VERDE}✓{R} {caso['fichero']:32} {caso['por_que']}")
+                        if detalle:
+                            imprimir(parte, True)
+
+            for ruta in sueltos:
+                nombre = os.path.basename(ruta)
+                print(f"\n{AZUL}==>{R} {B}{nombre}{R}")
+                parte = pasar(ruta, nombre)
+                imprimir(parte, True)
+                for consejo in parte.get("que_hacer", []):
+                    print(f"        {AMBAR}→{R} {consejo}")
     finally:
         shutil.rmtree(paquete, ignore_errors=True)
 
-    print(f"\n{AZUL}==>{R} {B}Resumen{R}")
-    print(f"    {VERDE}{limpios} limpios{R} · {ROJO}{cuarentena} en cuarentena{R}\n")
-    return 1 if cuarentena else 0
-
-
-def _imprimir(parte, detalle):
-    conteos = parte["peticiones"]
-    if parte["estado"] == "limpio":
-        print(f"    {VERDE}✓ LIMPIO{R}  {json.dumps(conteos)}")
-    else:
-        print(f"    {ROJO}✗ CUARENTENA{R}  {json.dumps(conteos)}")
-        print(f"      motivo: {parte['motivo']}")
-
-    for capa, cuantos in sorted(parte.get("resumen_por_capa", {}).items()):
-        print(f"      {capa}: {cuantos}")
-
-    rechazos = parte.get("rechazos", [])
-    for rechazo in rechazos if detalle else rechazos[:4]:
-        indice = rechazo.get("indice")
-        if rechazo.get("hallazgos"):
-            for h in rechazo["hallazgos"]:
-                print(f"      requests[{indice}] capa {h['capa']} {h['tipo']} "
-                      f"— {h['detalle']} en {h['donde']}")
-        else:
-            print(f"      requests[{indice}] {rechazo.get('detalle', '')}")
-    if not detalle and len(rechazos) > 4:
-        print(f"      {D}… y {len(rechazos) - 4} mas (usa --detalle){R}")
-
-    for consejo in parte.get("que_hacer", []):
-        print(f"      {AMBAR}→{R} {consejo}")
+    if suites:
+        total = ok + fallidos
+        print(f"\n{AZUL}==>{R} {B}Resumen{R}")
+        casos = sum(len(json.load(open(os.path.join(c, "manifiesto.json"),
+                                      encoding="utf-8"))["casos"]) for c in suites)
+        print(f"    {VERDE}{casos - fallidos} de {casos} como se esperaba{R}"
+              + (f" · {ROJO}{fallidos} discrepancias{R}" if fallidos else ""))
+        print()
+    return 1 if fallidos else 0
 
 
 if __name__ == "__main__":

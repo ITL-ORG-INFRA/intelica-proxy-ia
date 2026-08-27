@@ -8,7 +8,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 0"
+            "content": "Clasifica el caso 0"
           }
         ]
       }
@@ -21,7 +21,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 1"
+            "content": "Clasifica el caso 1"
           }
         ]
       }
@@ -34,7 +34,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 2"
+            "content": "Clasifica el caso 2"
           }
         ]
       }
@@ -47,7 +47,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 3"
+            "content": "Clasifica el caso 3"
           }
         ]
       }
@@ -60,7 +60,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 4"
+            "content": "Clasifica el caso 4"
           }
         ]
       }
@@ -73,7 +73,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 5"
+            "content": "Clasifica el caso 5"
           }
         ]
       }
@@ -86,7 +86,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 6"
+            "content": "Clasifica el caso 6"
           }
         ]
       }
@@ -99,7 +99,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 7"
+            "content": "Clasifica el caso 7"
           }
         ]
       }
@@ -112,7 +112,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 8"
+            "content": "Clasifica el caso 8"
           }
         ]
       }
@@ -125,7 +125,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 9"
+            "content": "Clasifica el caso 9"
           }
         ]
       }
@@ -138,7 +138,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 10"
+            "content": "Clasifica el caso 10"
           }
         ]
       }
@@ -151,7 +151,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 11"
+            "content": "Clasifica el caso 11"
           }
         ]
       }
@@ -164,7 +164,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 12"
+            "content": "Clasifica el caso 12"
           }
         ]
       }
@@ -177,7 +177,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 13"
+            "content": "Clasifica el caso 13"
           }
         ]
       }
@@ -190,7 +190,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 14"
+            "content": "Clasifica el caso 14"
           }
         ]
       }
@@ -203,7 +203,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 15"
+            "content": "Clasifica el caso 15"
           }
         ]
       }
@@ -216,7 +216,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 16"
+            "content": "Clasifica el caso 16"
           }
         ]
       }
@@ -229,7 +229,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 17"
+            "content": "Clasifica el caso 17"
           }
         ]
       }
@@ -242,7 +242,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 18"
+            "content": "Clasifica el caso 18"
           }
         ]
       }
@@ -255,7 +255,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 19"
+            "content": "Clasifica el caso 19"
           }
         ]
       }
@@ -268,7 +268,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 20"
+            "content": "Clasifica el caso 20"
           }
         ]
       }
@@ -281,7 +281,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 21"
+            "content": "Clasifica el caso 21"
           }
         ]
       }
@@ -294,7 +294,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 22"
+            "content": "Clasifica el caso 22"
           }
         ]
       }
@@ -307,7 +307,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 23"
+            "content": "Clasifica el caso 23"
           }
         ]
       }
@@ -320,7 +320,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 24"
+            "content": "Clasifica el caso 24"
           }
         ]
       }
@@ -333,7 +333,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 25"
+            "content": "Clasifica el caso 25"
           }
         ]
       }
@@ -346,7 +346,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 26"
+            "content": "Clasifica el caso 26"
           }
         ]
       }
@@ -359,7 +359,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 27"
+            "content": "Clasifica el caso 27"
           }
         ]
       }
@@ -372,7 +372,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 28"
+            "content": "Clasifica el caso 28"
           }
         ]
       }
@@ -385,7 +385,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 29"
+            "content": "Clasifica el caso 29"
           }
         ]
       }
@@ -398,7 +398,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 30"
+            "content": "Clasifica el caso 30"
           }
         ]
       }
@@ -411,7 +411,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 31"
+            "content": "Clasifica el caso 31"
           }
         ]
       }
@@ -424,7 +424,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 32"
+            "content": "Clasifica el caso 32"
           }
         ]
       }
@@ -437,7 +437,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 33"
+            "content": "Clasifica el caso 33"
           }
         ]
       }
@@ -450,7 +450,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 34"
+            "content": "Clasifica el caso 34"
           }
         ]
       }
@@ -463,7 +463,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 35"
+            "content": "Clasifica el caso 35"
           }
         ]
       }
@@ -476,7 +476,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 36"
+            "content": "Clasifica el caso 36"
           }
         ]
       }
@@ -489,7 +489,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 37"
+            "content": "Clasifica el caso 37"
           }
         ]
       }
@@ -502,7 +502,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 38"
+            "content": "Clasifica el caso 38"
           }
         ]
       }
@@ -515,7 +515,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 39"
+            "content": "Clasifica el caso 39"
           }
         ]
       }
@@ -528,7 +528,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 40"
+            "content": "Clasifica el caso 40"
           }
         ]
       }
@@ -541,7 +541,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 41"
+            "content": "Clasifica el caso 41"
           }
         ]
       }
@@ -554,7 +554,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 42"
+            "content": "Clasifica el caso 42"
           }
         ]
       }
@@ -567,7 +567,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 43"
+            "content": "Clasifica el caso 43"
           }
         ]
       }
@@ -580,7 +580,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 44"
+            "content": "Clasifica el caso 44"
           }
         ]
       }
@@ -593,7 +593,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 45"
+            "content": "Clasifica el caso 45"
           }
         ]
       }
@@ -606,7 +606,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 46"
+            "content": "Clasifica el caso 46"
           }
         ]
       }
@@ -619,7 +619,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 47"
+            "content": "Clasifica el caso 47"
           }
         ]
       }
@@ -632,7 +632,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 48"
+            "content": "Clasifica el caso 48"
           }
         ]
       }
@@ -645,7 +645,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 49"
+            "content": "Clasifica el caso 49"
           }
         ]
       }
@@ -658,7 +658,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 50"
+            "content": "Clasifica el caso 50"
           }
         ]
       }
@@ -671,7 +671,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 51"
+            "content": "Clasifica el caso 51"
           }
         ]
       }
@@ -684,7 +684,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 52"
+            "content": "Clasifica el caso 52"
           }
         ]
       }
@@ -697,7 +697,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 53"
+            "content": "Clasifica el caso 53"
           }
         ]
       }
@@ -710,7 +710,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 54"
+            "content": "Clasifica el caso 54"
           }
         ]
       }
@@ -723,7 +723,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 55"
+            "content": "Clasifica el caso 55"
           }
         ]
       }
@@ -736,7 +736,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 56"
+            "content": "Clasifica el caso 56"
           }
         ]
       }
@@ -749,7 +749,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 57"
+            "content": "Clasifica el caso 57"
           }
         ]
       }
@@ -762,7 +762,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 58"
+            "content": "Clasifica el caso 58"
           }
         ]
       }
@@ -775,7 +775,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 59"
+            "content": "Clasifica el caso 59"
           }
         ]
       }
@@ -788,7 +788,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 60"
+            "content": "Clasifica el caso 60"
           }
         ]
       }
@@ -801,7 +801,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 61"
+            "content": "Clasifica el caso 61"
           }
         ]
       }
@@ -814,7 +814,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 62"
+            "content": "Clasifica el caso 62"
           }
         ]
       }
@@ -827,7 +827,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 63"
+            "content": "Clasifica el caso 63"
           }
         ]
       }
@@ -840,7 +840,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 64"
+            "content": "Clasifica el caso 64"
           }
         ]
       }
@@ -853,7 +853,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 65"
+            "content": "Clasifica el caso 65"
           }
         ]
       }
@@ -866,7 +866,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 66"
+            "content": "Clasifica el caso 66"
           }
         ]
       }
@@ -879,7 +879,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 67"
+            "content": "Clasifica el caso 67"
           }
         ]
       }
@@ -892,7 +892,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 68"
+            "content": "Clasifica el caso 68"
           }
         ]
       }
@@ -905,7 +905,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 69"
+            "content": "Clasifica el caso 69"
           }
         ]
       }
@@ -918,7 +918,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 70"
+            "content": "Clasifica el caso 70"
           }
         ]
       }
@@ -931,7 +931,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 71"
+            "content": "Clasifica el caso 71"
           }
         ]
       }
@@ -944,7 +944,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 72"
+            "content": "Clasifica el caso 72"
           }
         ]
       }
@@ -957,7 +957,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 73"
+            "content": "Clasifica el caso 73"
           }
         ]
       }
@@ -970,7 +970,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 74"
+            "content": "Clasifica el caso 74"
           }
         ]
       }
@@ -983,7 +983,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 75"
+            "content": "Clasifica el caso 75"
           }
         ]
       }
@@ -996,7 +996,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 76"
+            "content": "Clasifica el caso 76"
           }
         ]
       }
@@ -1009,7 +1009,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 77"
+            "content": "Clasifica el caso 77"
           }
         ]
       }
@@ -1022,7 +1022,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 78"
+            "content": "Clasifica el caso 78"
           }
         ]
       }
@@ -1035,7 +1035,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 79"
+            "content": "Clasifica el caso 79"
           }
         ]
       }
@@ -1048,7 +1048,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 80"
+            "content": "Clasifica el caso 80"
           }
         ]
       }
@@ -1061,7 +1061,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 81"
+            "content": "Clasifica el caso 81"
           }
         ]
       }
@@ -1074,7 +1074,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 82"
+            "content": "Clasifica el caso 82"
           }
         ]
       }
@@ -1087,7 +1087,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 83"
+            "content": "Clasifica el caso 83"
           }
         ]
       }
@@ -1100,7 +1100,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 84"
+            "content": "Clasifica el caso 84"
           }
         ]
       }
@@ -1113,7 +1113,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 85"
+            "content": "Clasifica el caso 85"
           }
         ]
       }
@@ -1126,7 +1126,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 86"
+            "content": "Clasifica el caso 86"
           }
         ]
       }
@@ -1139,7 +1139,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 87"
+            "content": "Clasifica el caso 87"
           }
         ]
       }
@@ -1152,7 +1152,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 88"
+            "content": "Clasifica el caso 88"
           }
         ]
       }
@@ -1165,7 +1165,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 89"
+            "content": "Clasifica el caso 89"
           }
         ]
       }
@@ -1178,7 +1178,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 90"
+            "content": "Clasifica el caso 90"
           }
         ]
       }
@@ -1191,7 +1191,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 91"
+            "content": "Clasifica el caso 91"
           }
         ]
       }
@@ -1204,7 +1204,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 92"
+            "content": "Clasifica el caso 92"
           }
         ]
       }
@@ -1217,7 +1217,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 93"
+            "content": "Clasifica el caso 93"
           }
         ]
       }
@@ -1230,7 +1230,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 94"
+            "content": "Clasifica el caso 94"
           }
         ]
       }
@@ -1243,7 +1243,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 95"
+            "content": "Clasifica el caso 95"
           }
         ]
       }
@@ -1256,7 +1256,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 96"
+            "content": "Clasifica el caso 96"
           }
         ]
       }
@@ -1269,7 +1269,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 97"
+            "content": "Clasifica el caso 97"
           }
         ]
       }
@@ -1282,7 +1282,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 98"
+            "content": "Clasifica el caso 98"
           }
         ]
       }
@@ -1295,7 +1295,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 99"
+            "content": "Clasifica el caso 99"
           }
         ]
       }
@@ -1308,7 +1308,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 100"
+            "content": "Clasifica el caso 100"
           }
         ]
       }
@@ -1321,7 +1321,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 101"
+            "content": "Clasifica el caso 101"
           }
         ]
       }
@@ -1334,7 +1334,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 102"
+            "content": "Clasifica el caso 102"
           }
         ]
       }
@@ -1347,7 +1347,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 103"
+            "content": "Clasifica el caso 103"
           }
         ]
       }
@@ -1360,7 +1360,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 104"
+            "content": "Clasifica el caso 104"
           }
         ]
       }
@@ -1373,7 +1373,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 105"
+            "content": "Clasifica el caso 105"
           }
         ]
       }
@@ -1386,7 +1386,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 106"
+            "content": "Clasifica el caso 106"
           }
         ]
       }
@@ -1399,7 +1399,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 107"
+            "content": "Clasifica el caso 107"
           }
         ]
       }
@@ -1412,7 +1412,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 108"
+            "content": "Clasifica el caso 108"
           }
         ]
       }
@@ -1425,7 +1425,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 109"
+            "content": "Clasifica el caso 109"
           }
         ]
       }
@@ -1438,7 +1438,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 110"
+            "content": "Clasifica el caso 110"
           }
         ]
       }
@@ -1451,7 +1451,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 111"
+            "content": "Clasifica el caso 111"
           }
         ]
       }
@@ -1464,7 +1464,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 112"
+            "content": "Clasifica el caso 112"
           }
         ]
       }
@@ -1477,7 +1477,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 113"
+            "content": "Clasifica el caso 113"
           }
         ]
       }
@@ -1490,7 +1490,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 114"
+            "content": "Clasifica el caso 114"
           }
         ]
       }
@@ -1503,7 +1503,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 115"
+            "content": "Clasifica el caso 115"
           }
         ]
       }
@@ -1516,7 +1516,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 116"
+            "content": "Clasifica el caso 116"
           }
         ]
       }
@@ -1529,7 +1529,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 117"
+            "content": "Clasifica el caso 117"
           }
         ]
       }
@@ -1542,7 +1542,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 118"
+            "content": "Clasifica el caso 118"
           }
         ]
       }
@@ -1555,7 +1555,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 119"
+            "content": "Clasifica el caso 119"
           }
         ]
       }
@@ -1568,7 +1568,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 120"
+            "content": "Clasifica el caso 120"
           }
         ]
       }
@@ -1581,7 +1581,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 121"
+            "content": "Clasifica el caso 121"
           }
         ]
       }
@@ -1594,7 +1594,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 122"
+            "content": "Clasifica el caso 122"
           }
         ]
       }
@@ -1607,7 +1607,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 123"
+            "content": "Clasifica el caso 123"
           }
         ]
       }
@@ -1620,7 +1620,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 124"
+            "content": "Clasifica el caso 124"
           }
         ]
       }
@@ -1633,7 +1633,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 125"
+            "content": "Clasifica el caso 125"
           }
         ]
       }
@@ -1646,7 +1646,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 126"
+            "content": "Clasifica el caso 126"
           }
         ]
       }
@@ -1659,7 +1659,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 127"
+            "content": "Clasifica el caso 127"
           }
         ]
       }
@@ -1672,7 +1672,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 128"
+            "content": "Clasifica el caso 128"
           }
         ]
       }
@@ -1685,7 +1685,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 129"
+            "content": "Clasifica el caso 129"
           }
         ]
       }
@@ -1698,7 +1698,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 130"
+            "content": "Clasifica el caso 130"
           }
         ]
       }
@@ -1711,7 +1711,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 131"
+            "content": "Clasifica el caso 131"
           }
         ]
       }
@@ -1724,7 +1724,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 132"
+            "content": "Clasifica el caso 132"
           }
         ]
       }
@@ -1737,7 +1737,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 133"
+            "content": "Clasifica el caso 133"
           }
         ]
       }
@@ -1750,7 +1750,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 134"
+            "content": "Clasifica el caso 134"
           }
         ]
       }
@@ -1763,7 +1763,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 135"
+            "content": "Clasifica el caso 135"
           }
         ]
       }
@@ -1776,7 +1776,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 136"
+            "content": "Clasifica el caso 136"
           }
         ]
       }
@@ -1789,7 +1789,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 137"
+            "content": "Clasifica el caso 137"
           }
         ]
       }
@@ -1802,7 +1802,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 138"
+            "content": "Clasifica el caso 138"
           }
         ]
       }
@@ -1815,7 +1815,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 139"
+            "content": "Clasifica el caso 139"
           }
         ]
       }
@@ -1828,7 +1828,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 140"
+            "content": "Clasifica el caso 140"
           }
         ]
       }
@@ -1841,7 +1841,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 141"
+            "content": "Clasifica el caso 141"
           }
         ]
       }
@@ -1854,7 +1854,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 142"
+            "content": "Clasifica el caso 142"
           }
         ]
       }
@@ -1867,7 +1867,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 143"
+            "content": "Clasifica el caso 143"
           }
         ]
       }
@@ -1880,7 +1880,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 144"
+            "content": "Clasifica el caso 144"
           }
         ]
       }
@@ -1893,7 +1893,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 145"
+            "content": "Clasifica el caso 145"
           }
         ]
       }
@@ -1906,7 +1906,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 146"
+            "content": "Clasifica el caso 146"
           }
         ]
       }
@@ -1919,7 +1919,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 147"
+            "content": "Clasifica el caso 147"
           }
         ]
       }
@@ -1932,7 +1932,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 148"
+            "content": "Clasifica el caso 148"
           }
         ]
       }
@@ -1945,7 +1945,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 149"
+            "content": "Clasifica el caso 149"
           }
         ]
       }
@@ -1958,7 +1958,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 150"
+            "content": "Clasifica el caso 150"
           }
         ]
       }
@@ -1971,7 +1971,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 151"
+            "content": "Clasifica el caso 151"
           }
         ]
       }
@@ -1984,7 +1984,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 152"
+            "content": "Clasifica el caso 152"
           }
         ]
       }
@@ -1997,7 +1997,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 153"
+            "content": "Clasifica el caso 153"
           }
         ]
       }
@@ -2010,7 +2010,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 154"
+            "content": "Clasifica el caso 154"
           }
         ]
       }
@@ -2023,7 +2023,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 155"
+            "content": "Clasifica el caso 155"
           }
         ]
       }
@@ -2036,7 +2036,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 156"
+            "content": "Clasifica el caso 156"
           }
         ]
       }
@@ -2049,7 +2049,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 157"
+            "content": "Clasifica el caso 157"
           }
         ]
       }
@@ -2062,7 +2062,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 158"
+            "content": "Clasifica el caso 158"
           }
         ]
       }
@@ -2075,7 +2075,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 159"
+            "content": "Clasifica el caso 159"
           }
         ]
       }
@@ -2088,7 +2088,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 160"
+            "content": "Clasifica el caso 160"
           }
         ]
       }
@@ -2101,7 +2101,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 161"
+            "content": "Clasifica el caso 161"
           }
         ]
       }
@@ -2114,7 +2114,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 162"
+            "content": "Clasifica el caso 162"
           }
         ]
       }
@@ -2127,7 +2127,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 163"
+            "content": "Clasifica el caso 163"
           }
         ]
       }
@@ -2140,7 +2140,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 164"
+            "content": "Clasifica el caso 164"
           }
         ]
       }
@@ -2153,7 +2153,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 165"
+            "content": "Clasifica el caso 165"
           }
         ]
       }
@@ -2166,7 +2166,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 166"
+            "content": "Clasifica el caso 166"
           }
         ]
       }
@@ -2179,7 +2179,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 167"
+            "content": "Clasifica el caso 167"
           }
         ]
       }
@@ -2192,7 +2192,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 168"
+            "content": "Clasifica el caso 168"
           }
         ]
       }
@@ -2205,7 +2205,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 169"
+            "content": "Clasifica el caso 169"
           }
         ]
       }
@@ -2218,7 +2218,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 170"
+            "content": "Clasifica el caso 170"
           }
         ]
       }
@@ -2231,7 +2231,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 171"
+            "content": "Clasifica el caso 171"
           }
         ]
       }
@@ -2244,7 +2244,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 172"
+            "content": "Clasifica el caso 172"
           }
         ]
       }
@@ -2257,7 +2257,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 173"
+            "content": "Clasifica el caso 173"
           }
         ]
       }
@@ -2270,7 +2270,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 174"
+            "content": "Clasifica el caso 174"
           }
         ]
       }
@@ -2283,7 +2283,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 175"
+            "content": "Clasifica el caso 175"
           }
         ]
       }
@@ -2296,7 +2296,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 176"
+            "content": "Clasifica el caso 176"
           }
         ]
       }
@@ -2309,7 +2309,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 177"
+            "content": "Clasifica el caso 177"
           }
         ]
       }
@@ -2322,7 +2322,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 178"
+            "content": "Clasifica el caso 178"
           }
         ]
       }
@@ -2335,7 +2335,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 179"
+            "content": "Clasifica el caso 179"
           }
         ]
       }
@@ -2348,7 +2348,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 180"
+            "content": "Clasifica el caso 180"
           }
         ]
       }
@@ -2361,7 +2361,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 181"
+            "content": "Clasifica el caso 181"
           }
         ]
       }
@@ -2374,7 +2374,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 182"
+            "content": "Clasifica el caso 182"
           }
         ]
       }
@@ -2387,7 +2387,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 183"
+            "content": "Clasifica el caso 183"
           }
         ]
       }
@@ -2400,7 +2400,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 184"
+            "content": "Clasifica el caso 184"
           }
         ]
       }
@@ -2413,7 +2413,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 185"
+            "content": "Clasifica el caso 185"
           }
         ]
       }
@@ -2426,7 +2426,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 186"
+            "content": "Clasifica el caso 186"
           }
         ]
       }
@@ -2439,7 +2439,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 187"
+            "content": "Clasifica el caso 187"
           }
         ]
       }
@@ -2452,7 +2452,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 188"
+            "content": "Clasifica el caso 188"
           }
         ]
       }
@@ -2465,7 +2465,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 189"
+            "content": "Clasifica el caso 189"
           }
         ]
       }
@@ -2478,7 +2478,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 190"
+            "content": "Clasifica el caso 190"
           }
         ]
       }
@@ -2491,7 +2491,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 191"
+            "content": "Clasifica el caso 191"
           }
         ]
       }
@@ -2504,7 +2504,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 192"
+            "content": "Clasifica el caso 192"
           }
         ]
       }
@@ -2517,7 +2517,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 193"
+            "content": "Clasifica el caso 193"
           }
         ]
       }
@@ -2530,7 +2530,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 194"
+            "content": "Clasifica el caso 194"
           }
         ]
       }
@@ -2543,7 +2543,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 195"
+            "content": "Clasifica el caso 195"
           }
         ]
       }
@@ -2556,7 +2556,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 196"
+            "content": "Clasifica el caso 196"
           }
         ]
       }
@@ -2569,7 +2569,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 197"
+            "content": "Clasifica el caso 197"
           }
         ]
       }
@@ -2582,13 +2582,13 @@
         "messages": [
           {
             "role": "user",
-            "content": "Clasifica el caso numero 198"
+            "content": "Clasifica el caso 198"
           }
         ]
       }
     },
     {
-      "custom_id": "pan-1",
+      "custom_id": "mala",
       "params": {
         "model": "claude-sonnet-4-5",
         "max_tokens": 256,
@@ -2602,6 +2602,6 @@
     }
   ],
   "metadata": {
-    "caso": "1 de 200 = 0.50%, por debajo del umbral del 1%. Las 199 limpias SI cruzan; la mala se queda fuera"
+    "caso": "1 de 200 = 0.50%: las 199 limpias SI cruzan"
   }
 }

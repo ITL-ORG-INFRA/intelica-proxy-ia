@@ -51,9 +51,21 @@ CLEAN="${P}-clean-${CUENTA}"
 QUAR="${P}-quarantine-${CUENTA}"
 
 if [[ ${#FICHEROS[@]} -eq 0 ]]; then
-  # Sin argumentos: todos los ejemplos, en orden.
-  while IFS= read -r f; do FICHEROS+=("$f"); done < <(find "${RAIZ}/ejemplos" -name '*.json' | sort)
+  FICHEROS=("${RAIZ}/ejemplos")
 fi
+
+# Las carpetas se expanden a sus ficheros; el manifiesto queda fuera de la
+# lista pero se consulta despues para saber que deberia pasar con cada uno.
+EXPANDIDOS=()
+for entrada in "${FICHEROS[@]}"; do
+  if [[ -d "$entrada" ]]; then
+    while IFS= read -r f; do EXPANDIDOS+=("$f"); done \
+      < <(find "$entrada" -name '*.json' ! -name 'manifiesto.json' | sort)
+  else
+    EXPANDIDOS+=("$entrada")
+  fi
+done
+FICHEROS=("${EXPANDIDOS[@]}")
 [[ ${#FICHEROS[@]} -gt 0 ]] || die "no hay ficheros que probar"
 
 paso "Destino"
@@ -72,7 +84,7 @@ print('b_' + hashlib.sha256(f'{sys.argv[1]}/{sys.argv[2]}/{sys.argv[3]}'.encode(
 " "$1" "$2" "$3"
 }
 
-limpios=0; cuarentena=0; sin_respuesta=0
+limpios=0; cuarentena=0; sin_respuesta=0; discrepancias=0
 
 for fichero in "${FICHEROS[@]}"; do
   [[ -f "$fichero" ]] || { printf '\n  %s✗%s no existe: %s\n' "$ROJO" "$R" "$fichero"; continue; }
@@ -83,6 +95,14 @@ for fichero in "${FICHEROS[@]}"; do
   paso "$nombre"
   caso="$(jq -r '.metadata.caso // ""' "$fichero")"
   [[ -n "$caso" ]] && dato "$caso"
+
+  manifiesto="$(dirname "$fichero")/manifiesto.json"
+  esperado=""
+  if [[ -f "$manifiesto" ]]; then
+    esperado="$(jq -r --arg f "$nombre" \
+      '.casos[] | select(.fichero == $f) | .esperado // ""' "$manifiesto" 2>/dev/null)"
+    [[ -n "$esperado" ]] && dato "esperado: ${esperado}"
+  fi
   dato "peticiones: $(jq '.requests | length' "$fichero")"
 
   clave="entrada/prueba-$(date +%Y%m%d-%H%M%S)-${nombre}"
@@ -116,6 +136,12 @@ for fichero in "${FICHEROS[@]}"; do
 
   estado="$(jq -r '.estado' <<<"$parte")"
 
+  if [[ -n "$esperado" && "$estado" != "$esperado" ]]; then
+    printf '    %s✗ NO COINCIDE%s  obtenido=%s esperado=%s\n' \
+      "$ROJO" "$R" "$estado" "$esperado"
+    discrepancias=$((discrepancias + 1))
+  fi
+
   if [[ "$estado" == "limpio" ]]; then
     printf '    %s✓ LIMPIO%s  %s\n' "$VERDE" "$R" "$(jq -c '.peticiones' <<<"$parte")"
     limpios=$((limpios + 1))
@@ -133,8 +159,13 @@ for fichero in "${FICHEROS[@]}"; do
 done
 
 paso "Resumen"
-printf '    %s%d limpios%s · %s%d en cuarentena%s · %d sin respuesta\n\n' \
+printf '    %s%d limpios%s · %s%d en cuarentena%s · %d sin respuesta\n' \
   "$VERDE" "$limpios" "$R" "$ROJO" "$cuarentena" "$R" "$sin_respuesta"
+if [[ $discrepancias -gt 0 ]]; then
+  printf '    %s%d no coinciden con el manifiesto%s\n\n' "$ROJO" "$discrepancias" "$R"
+else
+  printf '    %stodo coincide con lo declarado en los manifiestos%s\n\n' "$VERDE" "$R"
+fi
 
 cat <<AYUDA
     ${B}Para mirar mas a fondo${R}

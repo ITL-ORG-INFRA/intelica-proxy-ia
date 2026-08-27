@@ -1,0 +1,69 @@
+{
+  "suite": "Capa 1 — envelope deny-by-default",
+  "descripcion": "El esquema es una lista de lo PERMITIDO. Lo que no este, rechaza.",
+  "casos": [
+    {
+      "fichero": "clave-extra-en-params.json",
+      "peticiones": 1,
+      "por_que": "campo 'pan' que no esta en el esquema",
+      "esperado": "cuarentena",
+      "capas": [
+        1
+      ],
+      "rechazadas": 1
+    },
+    {
+      "fichero": "clave-extra-en-raiz.json",
+      "peticiones": 1,
+      "por_que": "clave desconocida en la raiz: ni se lee el lote",
+      "esperado": "cuarentena",
+      "capas": []
+    },
+    {
+      "fichero": "modelo-no-permitido.json",
+      "peticiones": 1,
+      "por_que": "modelo fuera de la lista blanca",
+      "esperado": "cuarentena",
+      "capas": [
+        1
+      ],
+      "rechazadas": 1
+    },
+    {
+      "fichero": "custom-id-repetido.json",
+      "peticiones": 2,
+      "por_que": "custom_id duplicado: Anthropic rechazaria el lote sin decir cual",
+      "esperado": "cuarentena",
+      "rechazadas": 1
+    },
+    {
+      "fichero": "custom-id-no-opaco.json",
+      "peticiones": 1,
+      "por_que": "custom_id con pinta de DNI: PASA. El proxy es PCI, no sabe que es un DNI",
+      "esperado": "limpio",
+      "capas": [],
+      "rechazadas": 0,
+      "limpias": 1
+    },
+    {
+      "fichero": "rol-invalido.json",
+      "peticiones": 1,
+      "por_que": "role 'system' dentro de messages: solo user y assistant",
+      "esperado": "cuarentena",
+      "capas": [
+        1
+      ],
+      "rechazadas": 1
+    },
+    {
+      "fichero": "custom-id-con-pan.json",
+      "peticiones": 1,
+      "por_que": "PAN como custom_id: viaja a Anthropic, asi que se escanea",
+      "esperado": "cuarentena",
+      "capas": [
+        3
+      ],
+      "rechazadas": 1
+    }
+  ]
+}

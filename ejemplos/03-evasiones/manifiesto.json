@@ -1,0 +1,56 @@
+{
+  "suite": "Capa 0 — evasiones de codificacion",
+  "descripcion": "El mismo numero escrito de formas que a un regex ingenuo se le escapan. La normalizacion los iguala.",
+  "casos": [
+    {
+      "fichero": "ancho-completo.json",
+      "peticiones": 1,
+      "por_que": "digitos de ancho completo (NFKC)",
+      "esperado": "cuarentena",
+      "capas": [
+        3
+      ],
+      "rechazadas": 1
+    },
+    {
+      "fichero": "ancho-cero.json",
+      "peticiones": 1,
+      "por_que": "separado por espacios de ancho cero",
+      "esperado": "cuarentena",
+      "capas": [
+        3
+      ],
+      "rechazadas": 1
+    },
+    {
+      "fichero": "guion-suave.json",
+      "peticiones": 1,
+      "por_que": "guiones suaves invisibles",
+      "esperado": "cuarentena",
+      "capas": [
+        3
+      ],
+      "rechazadas": 1
+    },
+    {
+      "fichero": "guion-unicode.json",
+      "peticiones": 1,
+      "por_que": "guion Unicode que no es el ASCII",
+      "esperado": "cuarentena",
+      "capas": [
+        3
+      ],
+      "rechazadas": 1
+    },
+    {
+      "fichero": "dentro-de-base64.json",
+      "peticiones": 1,
+      "por_que": "PAN escondido dentro de una cadena base64",
+      "esperado": "cuarentena",
+      "capas": [
+        3
+      ],
+      "rechazadas": 1
+    }
+  ]
+}

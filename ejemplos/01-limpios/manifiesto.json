@@ -1,0 +1,30 @@
+{
+  "suite": "Lotes limpios",
+  "descripcion": "Nada debe dispararse. Si alguno acaba en cuarentena, hay un falso positivo.",
+  "casos": [
+    {
+      "fichero": "texto-normal.json",
+      "peticiones": 5,
+      "por_que": "prompts de trabajo corrientes",
+      "esperado": "limpio",
+      "limpias": 5,
+      "rechazadas": 0
+    },
+    {
+      "fichero": "con-system.json",
+      "peticiones": 1,
+      "por_que": "campo system, que si esta permitido",
+      "esperado": "limpio",
+      "limpias": 1,
+      "rechazadas": 0
+    },
+    {
+      "fichero": "bloques-de-texto.json",
+      "peticiones": 1,
+      "por_que": "content como lista de bloques de texto",
+      "esperado": "limpio",
+      "limpias": 1,
+      "rechazadas": 0
+    }
+  ]
+}
