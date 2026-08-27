@@ -231,3 +231,168 @@ def decode_cursor(cursor: str) -> Dict[str, Any]:
         return json.loads(base64.urlsafe_b64decode(cursor.encode("ascii")))
     except Exception as exc:  # noqa: BLE001
         raise ValueError("cursor invalido") from exc
+
+
+# ---------------------------------------------------------------------------
+# Lotes de varias partes, disparados por manifiesto
+#
+# Un "lote" es una carpeta de raw con varios ficheros de datos y un
+# _MANIFEST.json que se sube AL FINAL. El manifiesto es la senal de "ya esta
+# todo": hasta que llega, no se sabe cuantas partes tiene el lote.
+#
+# Dos items:
+#   lote#<prefijo>   el lote y por donde va
+#   parte#<key>      una parte concreta, para no contarla dos veces
+# ---------------------------------------------------------------------------
+
+class EstadoLote:
+    ESPERANDO_PARTES = "esperando_partes"   # falta que el sanitizer acabe alguna
+    LISTO = "listo"                         # todas limpias, se puede enviar
+    ENVIADO = "enviado"
+    CUARENTENA = "cuarentena"               # alguna parte fue rechazada
+    FALLIDO = "fallido"
+
+    #: los que el barrido programado tiene que reintentar
+    PENDIENTES = (ESPERANDO_PARTES, LISTO)
+
+
+class YaContada(Exception):
+    """La parte ya estaba registrada: reentrega de S3, no un error."""
+
+
+class YaEnviado(Exception):
+    """Otra invocacion se llevo el envio de este lote."""
+
+
+def lote_de(key: str) -> str:
+    """El lote es la carpeta que contiene la parte.
+
+    entrada/lote-2026-08-27/parte-01.json  ->  entrada/lote-2026-08-27
+    """
+    return key.rsplit("/", 1)[0] if "/" in key else ""
+
+
+def registrar_parte(lote: str, key: str, limpia: bool,
+                    request_count: int = 0, clean_key: str = "") -> None:
+    """Anota una parte y suma al contador del lote, exactamente una vez.
+
+    El PutItem condicional es lo que hace idempotente el conteo: los eventos de
+    S3 son at-least-once, y sin esto una reentrega inflaria el contador y el
+    lote parece completo cuando no lo esta.
+    """
+    try:
+        _table.put_item(
+            Item={"batch_id": f"parte#{key}",
+                  "lote": lote,
+                  "status": "limpia" if limpia else "rechazada",
+                  "created_at": now_iso(),
+                  "request_count": request_count,
+                  "clean_key": clean_key,
+                  "ttl": _ttl()},
+            ConditionExpression="attribute_not_exists(batch_id)")
+    except ClientError as exc:
+        if exc.response["Error"]["Code"] == "ConditionalCheckFailedException":
+            raise YaContada(key) from exc
+        raise
+
+    campo = "partes_limpias" if limpia else "partes_rechazadas"
+    _table.update_item(
+        Key={"batch_id": f"lote#{lote}"},
+        UpdateExpression=f"ADD {campo} :uno SET updated_at = :t, lote = :l",
+        ExpressionAttributeValues={":uno": 1, ":t": now_iso(), ":l": lote})
+
+
+def registrar_manifiesto(lote: str, ficheros: List[str],
+                         total_requests: int = 0) -> None:
+    """Anota que el manifiesto llego y cuantas partes se esperan."""
+    _table.update_item(
+        Key={"batch_id": f"lote#{lote}"},
+        UpdateExpression=("SET manifiesto_visto = :si, partes_esperadas = :n, "
+                          "ficheros = :f, total_requests = :tr, "
+                          "updated_at = :t, lote = :l, "
+                          "created_at = if_not_exists(created_at, :t)"),
+        ExpressionAttributeValues={":si": True, ":n": len(ficheros), ":f": ficheros,
+                                   ":tr": total_requests, ":t": now_iso(), ":l": lote})
+
+
+def estado_parte(key: str) -> Optional[Dict[str, Any]]:
+    """La parte registrada para esa clave de raw, con su clean_key."""
+    item = _table.get_item(Key={"batch_id": f"parte#{key}"}).get("Item")
+    return to_plain(item) if item else None
+
+
+def estado_lote(lote: str) -> Optional[Dict[str, Any]]:
+    item = _table.get_item(Key={"batch_id": f"lote#{lote}"}).get("Item")
+    return to_plain(item) if item else None
+
+
+def veredicto_lote(lote: str) -> str:
+    """Que se puede hacer con el lote ahora mismo.
+
+    Devuelve uno de: 'sin_manifiesto', 'esperando_partes', 'cuarentena', 'listo'.
+    """
+    item = estado_lote(lote)
+    if not item:
+        return "sin_manifiesto"
+    if not item.get("manifiesto_visto"):
+        # Hay partes procesadas pero nadie ha dicho todavia cuantas son en total.
+        return "sin_manifiesto"
+
+    esperadas = int(item.get("partes_esperadas", 0))
+    limpias = int(item.get("partes_limpias", 0))
+    rechazadas = int(item.get("partes_rechazadas", 0))
+
+    if rechazadas:
+        # Un lote es una unidad. Mandar solo las partes limpias seria
+        # normalizar que entren datos que no deben entrar.
+        return "cuarentena"
+    if limpias < esperadas:
+        return "esperando_partes"
+    return "listo"
+
+
+def marcar_lote(lote: str, estado: str, **extra: Any) -> None:
+    campos = {"status": estado, "updated_at": now_iso(), "lote": lote, **extra}
+    nombres, valores, sets = {}, {}, []
+    for indice, (clave, valor) in enumerate(campos.items()):
+        nombres[f"#f{indice}"] = clave
+        valores[f":v{indice}"] = valor
+        sets.append(f"#f{indice} = :v{indice}")
+    _table.update_item(
+        Key={"batch_id": f"lote#{lote}"},
+        UpdateExpression="SET " + ", ".join(sets),
+        ExpressionAttributeNames=nombres,
+        ExpressionAttributeValues=valores)
+
+
+def reclamar_envio(lote: str) -> None:
+    """Reserva el envio del lote. Lanza YaEnviado si otro se lo llevo.
+
+    Hace falta porque hay DOS caminos que pueden decidir enviar: el manifiesto
+    al aterrizar, y la ultima parte al terminar de sanitizarse. Si coinciden en
+    el mismo instante, sin esta condicional el lote se envia dos veces y se
+    paga dos veces.
+    """
+    try:
+        _table.update_item(
+            Key={"batch_id": f"lote#{lote}"},
+            UpdateExpression="SET #s = :enviando, reclamado_en = :t",
+            ConditionExpression="attribute_not_exists(#s) OR #s IN (:esperando, :listo)",
+            ExpressionAttributeNames={"#s": "status"},
+            ExpressionAttributeValues={
+                ":enviando": "enviando", ":t": now_iso(),
+                ":esperando": EstadoLote.ESPERANDO_PARTES, ":listo": EstadoLote.LISTO})
+    except ClientError as exc:
+        if exc.response["Error"]["Code"] == "ConditionalCheckFailedException":
+            raise YaEnviado(lote) from exc
+        raise
+
+
+def lotes_pendientes(limit: int = 50) -> List[Dict[str, Any]]:
+    """Lotes que el barrido programado debe reintentar.
+
+    Cubre el caso en que el manifiesto llego ANTES de que el sanitizer acabara:
+    ahi el evento del manifiesto no pudo enviar, y hace falta que alguien
+    vuelva a mirar.
+    """
+    return by_statuses(EstadoLote.PENDIENTES, limit=limit)

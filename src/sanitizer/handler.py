@@ -35,6 +35,28 @@ _cw = boto3.client("cloudwatch")
 
 NAMESPACE = "IntelicaProxyIA/Sanitizer"
 
+#: sufijo del fichero que cierra un lote. Lo procesa el submitter, no este.
+MANIFIESTO = "_MANIFEST.json"
+
+
+def _registrar_parte(carpeta: str, key: str, limpia: bool,
+                     request_count: int = 0, clean_key: str = "") -> None:
+    """Anota la parte en el lote al que pertenece.
+
+    Si la carpeta esta vacia, el fichero no vive en un lote (se subio a pelo a
+    la raiz) y no hay nada que contar: sigue funcionando como antes.
+    """
+    if not carpeta:
+        return
+    try:
+        store.registrar_parte(carpeta, key, limpia=limpia,
+                              request_count=request_count, clean_key=clean_key)
+    except store.YaContada:
+        # Reentrega de S3. El conteo ya estaba hecho; no es un error.
+        log.info("parte ya contada", extra={"ctx_key": key})
+    except Exception:  # noqa: BLE001 — el veredicto ya esta escrito y es lo que importa
+        log.exception("no se pudo registrar la parte", extra={"ctx_key": key})
+
 
 def _metrica(nombre: str, valor: float, unidad: str = "Count", **dims: str) -> None:
     try:
@@ -103,7 +125,17 @@ def lambda_handler(evento: Dict[str, Any], context: Any) -> Dict[str, Any]:
     if not bucket or not key:
         raise ValueError("el evento no trae bucket/key")
     key = _unquote(key)
+
+    # El manifiesto lo procesa el submitter. Terraform filtra por sufijo, pero
+    # un filtro se puede desconfigurar y esta guarda cuesta dos lineas: si el
+    # sanitizer lo tratara como lote, lo mandaria a cuarentena por no tener
+    # 'requests' y el envio nunca se dispararia.
+    if key.endswith(MANIFIESTO):
+        log.info("manifiesto ignorado por el sanitizer", extra={"ctx_key": key})
+        return {"omitido": "es un manifiesto", "key": key}
+
     lote = _id_lote(bucket, key, etag)
+    carpeta = store.lote_de(key)
 
     log.info("lote recibido", extra={"ctx_batch_id": lote, "ctx_key": key})
 
@@ -224,6 +256,8 @@ def lambda_handler(evento: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
     _escribir_estado(lote, Status.LIMPIO, key, total, len(limpias),
                      rechazos, todos, motivo="")
+    _registrar_parte(carpeta, key, limpia=True,
+                     request_count=len(limpias), clean_key=clean_key)
 
     ms = round((time.monotonic() - arranque) * 1000)
     _metrica("PeticionesLimpias", len(limpias))
@@ -271,6 +305,11 @@ def _cuarentena(lote: str, bucket: str, key: str, tamano: int,
     # junto a un motivo que dice "1/3 rechazadas", y no sabe que peticion mirar.
     _escribir_estado(lote, Status.CUARENTENA, key, total, 0,
                      rechazos or [], hallazgos, motivo)
+
+    # La parte rechazada tambien se cuenta: es lo que hace que el lote pase a
+    # CUARENTENA en vez de quedarse esperando una parte que nunca va a llegar
+    # limpia. Un lote a medias es peor que un lote rechazado.
+    _registrar_parte(store.lote_de(key), key, limpia=False)
 
     _metrica("LotesEnCuarentena", 1)
     log.error("lote en cuarentena", extra={
