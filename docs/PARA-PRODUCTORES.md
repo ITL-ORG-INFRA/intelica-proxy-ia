@@ -9,6 +9,11 @@ Dejas un JSON en un bucket de S3. Al rato aparecen los resultados en otro bucket
 
 ## 1. Preparar el lote
 
+> **La entrada es JSON, no JSONL.** Un `.json` con un array `requests`. JSONL es
+> el formato de los **resultados**, no el de la entrada. (Si vienes de la Batch
+> API de OpenAI, allí sí se sube un `.jsonl`; la de Anthropic no acepta ficheros,
+> recibe un cuerpo JSON.)
+
 ```json
 {
   "requests": [
@@ -98,6 +103,34 @@ aws s3 cp s3://intelica-proxy-ia-dev-results-<cuenta>/results/<batch_id>.jsonl .
 ```
 
 Es un JSONL: una línea por petición, con el `custom_id` que tú pusiste.
+
+> **Cruza los resultados por `custom_id`, nunca por posición.** Anthropic
+> devuelve los resultados en **orden arbitrario** — no en el que los mandaste. Y
+> el proxy además descarta cualquier resultado que no pase el segundo pase de
+> sanitización, así que el fichero puede tener menos líneas que peticiones
+> enviaste.
+>
+> Emparejar por número de línea no da un error: da datos correctos asignados a
+> la fila equivocada, y eso no se detecta hasta que alguien lo mira. Por eso el
+> `custom_id` es obligatorio y tiene que ser único.
+
+```python
+import json
+respuestas = {}
+with open("resultados.jsonl", encoding="utf-8") as f:
+    for linea in f:
+        entrada = json.loads(linea)
+        respuestas[entrada["custom_id"]] = entrada["result"]
+
+# Y ahora sí, contra tus datos de origen:
+for fila in mis_filas:
+    resultado = respuestas.get(fila.custom_id)
+    if resultado is None:
+        pass  # descartada por el filtro o no procesada: revisa el parte de estado
+```
+
+Cada entrada trae `result.type`: `succeeded`, `errored`, `canceled` o `expired`.
+Sólo en `succeeded` hay contenido, en `result.message.content`.
 
 ## Lo que el proxy bloquea
 
