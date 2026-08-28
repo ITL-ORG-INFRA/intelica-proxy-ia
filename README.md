@@ -286,6 +286,7 @@ llevan carpetas extra porque reutilizan los detectores: `verificador` y `fetcher
 
 | Documento | Para qué |
 |---|---|
+| [EJEMPLO.md](docs/EJEMPLO.md) | Paso a paso de un lote real de varias partes: qué contiene cada fichero y en qué orden se sube |
 | [PARA-PRODUCTORES.md](docs/PARA-PRODUCTORES.md) | Guía para quien manda lotes. Es la que se pasa a los equipos |
 | [FRONTERA-CON-TERRAFORM.md](docs/FRONTERA-CON-TERRAFORM.md) | Quién manda sobre qué recurso, y qué exige el repo de Terraform |
 | [PROMPT-TERRAFORM-MANIFIESTO.md](docs/PROMPT-TERRAFORM-MANIFIESTO.md) | Cambio pendiente en Terraform: disparo del submitter por `_MANIFEST.json` |
