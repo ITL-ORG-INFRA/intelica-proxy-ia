@@ -81,6 +81,7 @@ def manifiesto(ficheros, total=0):
 
 def main():
     s3, tabla, cw = FakeS3(), FakeTable(), FakeCloudWatch()
+    claves_vistas = []
 
     class FakeSecretos:
         def get_secret_value(self, SecretId, **_kw):
@@ -105,6 +106,11 @@ def main():
         sys.path.insert(0, pkg_san)
         import handler as sanitizer
         import store
+
+        def sanitizer_key_intacta(clave):
+            """Devuelve la clave tal como la vio el sanitizer."""
+            bucket, key, _etag = sanitizer._origen(evento_s3(RAW, clave))
+            return key
 
         print("\n[1] el sanitizer ignora el manifiesto")
         s3.put_object(Bucket=RAW, Key=f"{LOTE}/_MANIFEST.json",
@@ -207,7 +213,38 @@ def main():
         ck("nombra el id duplicado", r.get("custom_id_duplicado") == "colision", r)
         ck("no se envio", len(enviados) == 2, len(enviados))
 
-        print("\n[9] manifiesto ilegible")
+        print("\n[9] claves con '+': EventBridge NO las codifica")
+        # Regresion. Se aplicaba unquote_plus a la clave de EventBridge, que
+        # llega sin codificar: un '+' literal —valido en S3— se convertia en
+        # espacio, la clave dejaba de existir y el lote moria con un 404 que
+        # apuntaba a un fichero que nadie habia subido.
+        MAS = "entrada/lote+2026/parte-01.json"
+        s3.put_object(Bucket=RAW, Key=MAS, Body=parte("mas", ["hola"]))
+        r = sanitizer_key_intacta(MAS)
+        ck("el sanitizer conserva el '+'", r == MAS, r)
+
+        MAS_MAN = "entrada/lote+2026/_MANIFEST.json"
+        s3.put_object(Bucket=RAW, Key=MAS_MAN, Body=manifiesto(["parte-01.json"]))
+        r = submitter.lambda_handler(evento_s3(RAW, MAS_MAN), Ctx())
+        ck("el submitter no corrompe el lote",
+           r.get("lote") == "entrada/lote+2026", r)
+        ck("y NO dice que el manifiesto es ilegible",
+           r.get("error") != "manifiesto ilegible", r)
+
+        print("\n[10] la notificacion nativa de S3 SI se decodifica")
+        # Formato Records: ahi S3 codifica el espacio como '+', asi que hay que
+        # deshacerlo. Los dos formatos necesitan tratos opuestos.
+        evento_records = {"Records": [{"s3": {
+            "bucket": {"name": RAW},
+            "object": {"key": "entrada/lote+2026/parte-01.json", "eTag": "e"}}}]}
+        ck("Records: '+' se convierte en espacio",
+           submitter._key_del_evento(evento_records) == "entrada/lote 2026/parte-01.json",
+           submitter._key_del_evento(evento_records))
+        ck("EventBridge: '+' se queda",
+           submitter._key_del_evento(evento_s3(RAW, MAS_MAN)) == MAS_MAN,
+           submitter._key_del_evento(evento_s3(RAW, MAS_MAN)))
+
+        print("\n[11] manifiesto ilegible")
         ROTO = "entrada/lote-roto"
         s3.put_object(Bucket=RAW, Key=f"{ROTO}/_MANIFEST.json", Body=b"{no es json")
         r = submitter.lambda_handler(evento_s3(RAW, f"{ROTO}/_MANIFEST.json"), Ctx())

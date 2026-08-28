@@ -21,6 +21,7 @@ veces y se pagaria dos veces.
 import json
 import time
 from typing import Any, Dict, List
+from urllib.parse import unquote_plus
 
 import boto3
 
@@ -62,12 +63,18 @@ MANIFIESTO = "_MANIFEST.json"
 
 
 def _key_del_evento(evento: Dict[str, Any]) -> str:
-    """La clave del objeto si el evento viene de S3; vacio si es un tick."""
+    """La clave del objeto si el evento viene de S3; vacio si es un tick.
+
+    Solo se decodifica la de la notificacion nativa de S3. EventBridge la
+    entrega sin codificar, y decodificarla convertiria un '+' literal en un
+    espacio: el manifiesto pasaria a apuntar a un lote que no existe, y el
+    submitter lo marcaria fallido con un nombre corrupto.
+    """
     if evento.get("source") == "aws.s3" or "detail" in evento:
         return evento.get("detail", {}).get("object", {}).get("key", "")
     registros = evento.get("Records") or []
     if registros and "s3" in registros[0]:
-        return registros[0]["s3"].get("object", {}).get("key", "")
+        return unquote_plus(registros[0]["s3"].get("object", {}).get("key", ""))
     return ""
 
 
@@ -75,7 +82,7 @@ def lambda_handler(evento: Dict[str, Any], context: Any) -> Dict[str, Any]:
     require("CLEAN_BUCKET", "BATCHES_TABLE", "ANTHROPIC_SECRET_ARN")
     arranque = time.monotonic()
 
-    key = _unquote(_key_del_evento(evento))
+    key = _key_del_evento(evento)
     if key.endswith(MANIFIESTO):
         return _por_manifiesto(key, arranque)
 
@@ -178,11 +185,6 @@ def lambda_handler(evento: Dict[str, Any], context: Any) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Camino 1: llego el manifiesto
 # ---------------------------------------------------------------------------
-
-def _unquote(key: str) -> str:
-    from urllib.parse import unquote_plus
-    return unquote_plus(key) if key else ""
-
 
 def _por_manifiesto(manifest_key: str, arranque: float) -> Dict[str, Any]:
     """El productor ha cerrado el lote. Se envia si esta completo."""

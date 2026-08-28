@@ -15,6 +15,7 @@ import json
 import os
 import time
 from typing import Any, Dict, List, Optional, Tuple
+from urllib.parse import unquote_plus
 
 import boto3
 
@@ -71,18 +72,36 @@ def _metrica(nombre: str, valor: float, unidad: str = "Count", **dims: str) -> N
         log.warning("no se pudo publicar la metrica", extra={"ctx_metrica": nombre})
 
 
+def _unquote(key: str) -> str:
+    """Decodifica una clave de notificacion nativa de S3.
+
+    unquote_plus y no unquote: S3 codifica el espacio como '+' en ese formato.
+    """
+    return unquote_plus(key) if key else ""
+
+
 def _origen(evento: Dict[str, Any]) -> Tuple[str, str, str]:
-    """Saca (bucket, key, etag) del evento, venga de EventBridge o de S3."""
+    """Saca (bucket, key, etag) del evento, venga de EventBridge o de S3.
+
+    La clave se decodifica SOLO en la rama de notificacion nativa de S3.
+    EventBridge entrega detail.object.key tal cual; las notificaciones de S3
+    (formato Records) la codifican, con '+' en lugar de espacio.
+
+    Decodificar la de EventBridge convierte un '+' literal —perfectamente
+    valido en una clave de S3— en un espacio, y a partir de ahi la clave no
+    existe: el head_object devuelve 404 y el lote se pierde con un error que
+    apunta a un fichero que nadie subio.
+    """
     if evento.get("source") == "aws.s3" or "detail" in evento:
         detalle = evento.get("detail", {})
         return (detalle.get("bucket", {}).get("name", ""),
-                detalle.get("object", {}).get("key", ""),
+                detalle.get("object", {}).get("key", ""),      # sin decodificar
                 detalle.get("object", {}).get("etag", ""))
     registros = evento.get("Records") or []
     if registros:
         s3e = registros[0].get("s3", {})
         return (s3e.get("bucket", {}).get("name", ""),
-                s3e.get("object", {}).get("key", ""),
+                _unquote(s3e.get("object", {}).get("key", "")),  # aqui SI
                 s3e.get("object", {}).get("eTag", ""))
     raise ValueError("evento no reconocido: ni EventBridge ni notificacion de S3")
 
@@ -124,8 +143,6 @@ def lambda_handler(evento: Dict[str, Any], context: Any) -> Dict[str, Any]:
     bucket, key, etag = _origen(evento)
     if not bucket or not key:
         raise ValueError("el evento no trae bucket/key")
-    key = _unquote(key)
-
     # El manifiesto lo procesa el submitter. Terraform filtra por sufijo, pero
     # un filtro se puede desconfigurar y esta guarda cuesta dos lineas: si el
     # sanitizer lo tratara como lote, lo mandaria a cuarentena por no tener
@@ -406,8 +423,3 @@ def _resumen(hallazgos: List[Hallazgo]) -> Dict[str, int]:
         clave = f"capa{h.capa}_{h.tipo}"
         resumen[clave] = resumen.get(clave, 0) + 1
     return resumen
-
-
-def _unquote(key: str) -> str:
-    from urllib.parse import unquote_plus
-    return unquote_plus(key)
