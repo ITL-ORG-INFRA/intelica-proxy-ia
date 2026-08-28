@@ -120,6 +120,14 @@ cual, así que no metas un DNI ni un número de cuenta ahí.
 
 ---
 
+> **No lo escribas a mano.** `./scripts/subir-lote.sh dev ./mi-carpeta` genera el
+> manifiesto desde lo que realmente hay en la carpeta, valida las partes, avisa
+> de `custom_id` repetidos entre ellas, y sube en el orden correcto. Con
+> `--solo-manifiesto` te lo enseña sin subir nada.
+>
+> Los dos pasos siguientes explican qué construye, para que puedas replicarlo en
+> tu propio generador.
+
 ## Paso 2 — Preparar el manifiesto
 
 ```json

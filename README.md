@@ -176,6 +176,7 @@ construyendo dos veces y comparando.
 | `./scripts/publish.sh <dev\|qa\|prod>` | Sube código y layer. **No toca infraestructura** |
 | `./scripts/verify.sh <dev\|qa\|prod>` | Compara lo desplegado con `dist/` |
 | `./scripts/probar-fallos.sh <dev\|qa>` | Casos de fallo operativos y de lote contra el pipeline real |
+| `./scripts/subir-lote.sh <entorno> <carpeta>` | Sube un lote de varias partes y **genera su `_MANIFEST.json`** |
 
 `publish.sh` comprueba primero que las 6 funciones existan. Si falta alguna, aborta
 sin tocar nada: publicar a medias deja el sistema con unas Lambdas nuevas y otras
