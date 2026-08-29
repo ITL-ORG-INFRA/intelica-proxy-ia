@@ -37,13 +37,28 @@ Y comprueba que las alarmas existentes `hard-block` (o como se llame la de
 
 ## 2 · Descripciones nuevas
 
-Sustituye la `alarm_description` de cada alarma por su texto. Van en español
-porque quien las recibe trabaja en español, e incluyen el comando a ejecutar
-porque a las 4 de la mañana nadie recuerda la sintaxis de `aws dynamodb`.
+**Localiza cada alarma por la MÉTRICA que vigila, no por su nombre.** Los nombres
+que uses en este repo pueden no coincidir con los de abajo — la que vigila
+`BloqueoDuro` se llama hoy `hard-block`, por ejemplo. Si creas alarmas nuevas en
+vez de actualizar las existentes, acabaremos con las siete duplicadas y sonando
+por partida doble.
+
+Para ver qué hay desplegado y con qué nombre:
+
+```bash
+aws cloudwatch describe-alarms --alarm-name-prefix intelica-proxy-ia \
+  --region eu-south-2 \
+  --query 'MetricAlarms[].[AlarmName,MetricName,Threshold]' --output table
+```
+
+Sustituye la `alarm_description` de cada una por el texto que corresponde a su
+métrica. Van en español porque quien las recibe trabaja en español, e incluyen el
+comando a ejecutar porque a las 4 de la mañana nadie recuerda la sintaxis de
+`aws dynamodb`.
 
 Sustituye `<CUENTA>` por el id de cuenta y `<ENTORNO>` por dev/qa/prod.
 
-### `bloqueo-duro` — métrica `BloqueoDuro`
+### La que vigila `BloqueoDuro`  ·  hoy se llama `hard-block`
 
 ```
 CRITICO. Un productor mando datos de banda magnetica, CVV o PIN en un lote.
@@ -64,7 +79,7 @@ El informe, con la capa y la ruta exacta (nunca el valor):
   aws s3 ls s3://intelica-proxy-ia-<ENTORNO>-quarantine-<CUENTA>/quarantine/
 ```
 
-### `canario-no-bloqueado` — métrica `CanarioNoBloqueado`
+### La que vigila `CanarioNoBloqueado`
 
 ```
 CRITICO. El filtro dejo pasar tarjetas de prueba que deberia haber bloqueado.
@@ -83,7 +98,7 @@ Ese item trae 'ultimo_lote'. Consulta ese batch_id: si su status no es
   aws logs tail /aws/lambda/intelica-proxy-ia-<ENTORNO>-sanitizer --since 2h
 ```
 
-### `canario-no-procesado` — métrica `CanarioNoProcesado`
+### La que vigila `CanarioNoProcesado`
 
 ```
 CRITICO. El canario planto su lote y el sanitizer no llego a procesarlo.
@@ -99,7 +114,7 @@ canario no tiene permiso para escribir en raw.
   aws logs tail /aws/lambda/intelica-proxy-ia-<ENTORNO>-sanitizer --since 2h
 ```
 
-### `fallo-del-sanitizer` — métrica `FalloDelSanitizer`
+### La que vigila `FalloDelSanitizer`
 
 ```
 CRITICO. El verificador encontro un numero de tarjeta en la ZONA LIMPIA.
@@ -115,7 +130,7 @@ El informe:
 Trae la ruta y la marca de la tarjeta, nunca el numero.
 ```
 
-### `pan-en-resultados` — métrica `PanEnResultados`
+### La que vigila `PanEnResultados`
 
 ```
 CRITICO. Volvio un numero de tarjeta en la respuesta de Anthropic.
@@ -130,7 +145,7 @@ Lo descartado, sin los valores:
     --region eu-south-2 | grep descartados
 ```
 
-### `lotes-en-cuarentena` — métrica `LotesEnCuarentena`, umbral 3
+### La que vigila `LotesEnCuarentena`  ·  umbral 3
 
 ```
 Tres o mas lotes de productores reales rechazados en cinco minutos. No es un
@@ -146,7 +161,7 @@ Empieza por ahi antes de mirar el CDE: el parte suele bastar para saber a que
 equipo avisar.
 ```
 
-### `lotes-expirados` — métrica `LotesExpirados`
+### La que vigila `LotesExpirados`
 
 ```
 Un lote paso 24 h en Anthropic sin completarse y expiro. Lo expirado no se
@@ -160,7 +175,7 @@ silencio. Revisa la ocupacion antes de reenviar:
     --key '{"batch_id":{"S":"__inflight__"}}' --region eu-south-2
 ```
 
-### `cola-casi-llena` — métrica `OcupacionCola`, umbral 80 %
+### La que vigila `OcupacionCola`  ·  umbral 80 %
 
 ```
 La cola en vuelo supera el 80% del tier de Anthropic (200.000 peticiones).
@@ -179,9 +194,14 @@ lotes en vuelo se vacien.
 severidad se lea en el asunto del correo, que es lo único que se ve en el móvil:
 
 ```
-CRITICO-intelica-proxy-ia-<entorno>-bloqueo-duro
+CRITICO-intelica-proxy-ia-<entorno>-hard-block
 AVISO-intelica-proxy-ia-<entorno>-lotes-en-cuarentena
 ```
+
+Ojo: en Terraform, cambiar `alarm_name` **destruye y recrea** el recurso. Es
+inofensivo aquí —una alarma no guarda estado que importe— pero el plan mostrará
+destrucciones y conviene saber que es esperado. Si prefieres evitarlo, deja los
+nombres y quédate sólo con las descripciones: son el 90 % del valor.
 
 **`ok_actions` al mismo topic** en las alarmas de volumen (`lotes-en-cuarentena`,
 `cola-casi-llena`). Sin eso nadie se entera de que la situación se resolvió y
