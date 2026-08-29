@@ -216,6 +216,16 @@ def main():
         ck("el canario NO cruza", r["estado"] == store.Status.CUARENTENA, r)
         item = tabla.items[r["batch_id"]]
         ck("marcado como canario", item.get("es_canario") is True, item.get("es_canario"))
+        # Un canario bloqueado es una buena noticia, no una incidencia: no puede
+        # compartir metrica con los productores o la alarma suena a diario por
+        # un exito, y en dos semanas nadie la mira.
+        ck("emite CanarioBloqueoDuro, no BloqueoDuro",
+           "CanarioBloqueoDuro" in cw.nombres() and
+           cw.nombres().count("BloqueoDuro") == 1,   # solo la del caso [3], real
+           [n for n in cw.nombres() if "Bloqueo" in n])
+        ck("y CanarioEnCuarentena, no LotesEnCuarentena",
+           "CanarioEnCuarentena" in cw.nombres(),
+           [n for n in cw.nombres() if "uarentena" in n])
 
     # --- verificador, sobre el objeto que el sanitizer dio por bueno --------
     for modulo in ("handler", "store", "config", "logs", "detectors", "normalize",

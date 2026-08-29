@@ -294,6 +294,7 @@ llevan carpetas extra porque reutilizan los detectores: `verificador` y `fetcher
 | [PROMPT-TERRAFORM-MANIFIESTO.md](docs/PROMPT-TERRAFORM-MANIFIESTO.md) | Cambio en Terraform: disparo del submitter por `_MANIFEST.json` |
 | [PLAN-COLA-SUPERVISOR.md](docs/PLAN-COLA-SUPERVISOR.md) | **Pendiente.** Sustituir el polling por horario por una cola SQS — lado del código |
 | [PROMPT-TERRAFORM-COLA.md](docs/PROMPT-TERRAFORM-COLA.md) | **Pendiente.** Lo mismo, lado de la infraestructura |
+| [PROMPT-TERRAFORM-ALARMAS.md](docs/PROMPT-TERRAFORM-ALARMAS.md) | Descripciones de alarma accionables, con el comando a ejecutar en cada una |
 | [SOBRE-LOS-PANES-DE-PRUEBA.md](docs/SOBRE-LOS-PANES-DE-PRUEBA.md) | Por qué hay números de tarjeta en el repo y por qué no son datos reales |
 | [PROMPT-TERRAFORM.md](docs/PROMPT-TERRAFORM.md) | Especificación completa de la infraestructura |
 

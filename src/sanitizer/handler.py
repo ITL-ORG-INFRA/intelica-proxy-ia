@@ -218,7 +218,14 @@ def lambda_handler(evento: Dict[str, Any], context: Any) -> Dict[str, Any]:
             # peticion mala": es que el productor esta mandando datos que no
             # deberia tener. Se aborta el lote entero sin mirar el resto.
             todos.extend(hallazgos)
-            _metrica("BloqueoDuro", 1)
+            # El canario planta un track2 a proposito: que lo bloqueemos es la
+            # buena noticia, no una incidencia. Si compartiera metrica con los
+            # productores, la alarma sonaria cada dia por un exito y en dos
+            # semanas nadie la miraria — que es justo cuando deja de servir.
+            if es_canario:
+                _metrica("CanarioBloqueoDuro", 1)
+            else:
+                _metrica("BloqueoDuro", 1)
             log.error("bloqueo duro: SAD detectado",
                       extra={"ctx_batch_id": lote, "ctx_donde": duros[0].donde,
                              "ctx_detalle": duros[0].detalle})
@@ -328,7 +335,10 @@ def _cuarentena(lote: str, bucket: str, key: str, tamano: int,
     # limpia. Un lote a medias es peor que un lote rechazado.
     _registrar_parte(store.lote_de(key), key, limpia=False)
 
-    _metrica("LotesEnCuarentena", 1)
+    if key.startswith(CANARY_PREFIX):
+        _metrica("CanarioEnCuarentena", 1)
+    else:
+        _metrica("LotesEnCuarentena", 1)
     log.error("lote en cuarentena", extra={
         "ctx_batch_id": lote, "ctx_motivo": motivo, "ctx_duro": duro,
         "ctx_hallazgos": len(hallazgos)})
