@@ -291,7 +291,9 @@ llevan carpetas extra porque reutilizan los detectores: `verificador` y `fetcher
 | [EJEMPLO.md](docs/EJEMPLO.md) | Paso a paso de un lote real de varias partes: qué contiene cada fichero y en qué orden se sube |
 | [PARA-PRODUCTORES.md](docs/PARA-PRODUCTORES.md) | Guía para quien manda lotes. Es la que se pasa a los equipos |
 | [FRONTERA-CON-TERRAFORM.md](docs/FRONTERA-CON-TERRAFORM.md) | Quién manda sobre qué recurso, y qué exige el repo de Terraform |
-| [PROMPT-TERRAFORM-MANIFIESTO.md](docs/PROMPT-TERRAFORM-MANIFIESTO.md) | Cambio pendiente en Terraform: disparo del submitter por `_MANIFEST.json` |
+| [PROMPT-TERRAFORM-MANIFIESTO.md](docs/PROMPT-TERRAFORM-MANIFIESTO.md) | Cambio en Terraform: disparo del submitter por `_MANIFEST.json` |
+| [PLAN-COLA-SUPERVISOR.md](docs/PLAN-COLA-SUPERVISOR.md) | **Pendiente.** Sustituir el polling por horario por una cola SQS — lado del código |
+| [PROMPT-TERRAFORM-COLA.md](docs/PROMPT-TERRAFORM-COLA.md) | **Pendiente.** Lo mismo, lado de la infraestructura |
 | [SOBRE-LOS-PANES-DE-PRUEBA.md](docs/SOBRE-LOS-PANES-DE-PRUEBA.md) | Por qué hay números de tarjeta en el repo y por qué no son datos reales |
 | [PROMPT-TERRAFORM.md](docs/PROMPT-TERRAFORM.md) | Especificación completa de la infraestructura |
 
