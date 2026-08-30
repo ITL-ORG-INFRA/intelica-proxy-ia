@@ -107,7 +107,7 @@ cualquier otra cosa rechaza la petición.
 | `max_tokens` | entero positivo |
 | `system` | texto o lista de bloques `{type, text, cache_control}` |
 | `messages` | lista de `{role, content}`, con `role` = `user` o `assistant` |
-| `output_config` | estructura libre dentro de `format.schema` |
+| `output_config` | `format.type` = `json_schema` o `text`; el esquema, libre |
 | `temperature`, `top_p`, `top_k`, `stop_sequences` | opcionales |
 
 Y el `custom_id`: **sólo alfanumérico, guion y guion bajo**, máximo 64
@@ -117,6 +117,13 @@ cual, así que no metas un DNI ni un número de cuenta ahí.
 > El `custom_id` **también se escanea**. Un PAN es alfanumérico, así que sería un
 > identificador válido — y cruzaría la frontera sin que ninguna capa lo mirase si
 > no se revisara. Se revisa.
+
+> Y el **esquema de salida** también, con una vuelta de tuerca: un esquema no es
+> dato, es una instrucción. Si declara una propiedad `cvv`, le está pidiendo al
+> modelo que extraiga el CVV del documento. Por eso ahí un nombre de campo
+> prohibido **rechaza la petición** en vez de borrar el campo en silencio: borrarlo
+> cambiaría el contrato que crees tener sin decírtelo. Las descripciones, los
+> `enum` y los nombres de propiedad pasan por las capas 3-5 como cualquier texto.
 
 ---
 

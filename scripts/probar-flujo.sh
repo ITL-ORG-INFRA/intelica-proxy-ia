@@ -60,7 +60,9 @@ EXPANDIDOS=()
 for entrada in "${FICHEROS[@]}"; do
   if [[ -d "$entrada" ]]; then
     while IFS= read -r f; do EXPANDIDOS+=("$f"); done \
-      < <(find "$entrada" -name '*.json' ! -name 'manifiesto.json' | sort)
+      < <(find "$entrada" \
+            \( -type d -exec test -e '{}/.es-lote' \; -prune \) -o \
+            \( -name '*.json' ! -name 'manifiesto.json' -print \) | sort)
   else
     EXPANDIDOS+=("$entrada")
   fi

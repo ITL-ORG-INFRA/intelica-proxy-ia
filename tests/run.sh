@@ -7,7 +7,8 @@ PY="${PYTHON:-.venv/bin/python}"
 [[ -x "$PY" ]] || { echo "no existe $PY — crea el venv (ver cabecera)"; exit 1; }
 fallos=0
 for prueba in tests/detectores_test.py tests/deteccion2_test.py \
-              tests/fixtures_test.py tests/e2e_test.py tests/manifiesto_test.py; do
+              tests/envelope_test.py tests/fixtures_test.py \
+              tests/e2e_test.py tests/manifiesto_test.py; do
   echo; echo "=============== $prueba ==============="
   "$PY" "$prueba" || fallos=$((fallos+1))
 done
