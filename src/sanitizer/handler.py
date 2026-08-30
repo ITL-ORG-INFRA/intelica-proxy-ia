@@ -25,8 +25,8 @@ from config import (
     GATE_REJECT_ABS, GATE_REJECT_PCT, MAX_RAW_BYTES, MAX_REQUESTS_PER_BATCH,
     QUARANTINE_BUCKET, require,
 )
-from detectors import Hallazgo, escanear_texto
-from envelope import EnvelopeInvalido, leer_raiz, normalizar_peticion
+from detectors import Finding, scan_text
+from envelope import InvalidEnvelope, read_root, normalize_request
 from logs import get_logger, scrub
 from store import Status
 
@@ -37,39 +37,39 @@ _cw = boto3.client("cloudwatch")
 NAMESPACE = "IntelicaProxyIA/Sanitizer"
 
 #: sufijo del fichero que cierra un lote. Lo procesa el submitter, no este.
-MANIFIESTO = "_MANIFEST.json"
+MANIFEST = "_MANIFEST.json"
 
 
-def _registrar_parte(carpeta: str, key: str, limpia: bool,
+def _record_part(folder: str, key: str, cleaned: bool,
                      request_count: int = 0, clean_key: str = "") -> None:
     """Anota la parte en el lote al que pertenece.
 
     Si la carpeta esta vacia, el fichero no vive en un lote (se subio a pelo a
     la raiz) y no hay nada que contar: sigue funcionando como antes.
     """
-    if not carpeta:
+    if not folder:
         return
     try:
-        store.registrar_parte(carpeta, key, limpia=limpia,
+        store.record_part(folder, key, cleaned=cleaned,
                               request_count=request_count, clean_key=clean_key)
-    except store.YaContada:
+    except store.AlreadyCounted:
         # Reentrega de S3. El conteo ya estaba hecho; no es un error.
         log.info("parte ya contada", extra={"ctx_key": key})
-    except Exception:  # noqa: BLE001 — el veredicto ya esta escrito y es lo que importa
+    except Exception:  # noqa: BLE001 — el verdict ya esta escrito y es lo que importa
         log.exception("no se pudo registrar la parte", extra={"ctx_key": key})
 
 
-def _metrica(nombre: str, valor: float, unidad: str = "Count", **dims: str) -> None:
+def _metric(name: str, value: float, unidad: str = "Count", **dims: str) -> None:
     try:
         _cw.put_metric_data(Namespace=NAMESPACE, MetricData=[{
-            "MetricName": nombre,
-            "Value": valor,
+            "MetricName": name,
+            "Value": value,
             "Unit": unidad,
             "Dimensions": [{"Name": k, "Value": v} for k, v in
                            {"Entorno": ENVIRONMENT, **dims}.items()],
         }])
     except Exception:  # noqa: BLE001 — una metrica no publicada no tumba el lote
-        log.warning("no se pudo publicar la metrica", extra={"ctx_metrica": nombre})
+        log.warning("no se pudo publicar la metrica", extra={"ctx_metrica": name})
 
 
 def _unquote(key: str) -> str:
@@ -80,7 +80,7 @@ def _unquote(key: str) -> str:
     return unquote_plus(key) if key else ""
 
 
-def _origen(evento: Dict[str, Any]) -> Tuple[str, str, str]:
+def _source(event: Dict[str, Any]) -> Tuple[str, str, str]:
     """Saca (bucket, key, etag) del evento, venga de EventBridge o de S3.
 
     La clave se decodifica SOLO en la rama de notificacion nativa de S3.
@@ -92,12 +92,12 @@ def _origen(evento: Dict[str, Any]) -> Tuple[str, str, str]:
     existe: el head_object devuelve 404 y el lote se pierde con un error que
     apunta a un fichero que nadie subio.
     """
-    if evento.get("source") == "aws.s3" or "detail" in evento:
-        detalle = evento.get("detail", {})
-        return (detalle.get("bucket", {}).get("name", ""),
-                detalle.get("object", {}).get("key", ""),      # sin decodificar
-                detalle.get("object", {}).get("etag", ""))
-    registros = evento.get("Records") or []
+    if event.get("source") == "aws.s3" or "detail" in event:
+        detail = event.get("detail", {})
+        return (detail.get("bucket", {}).get("name", ""),
+                detail.get("object", {}).get("key", ""),      # sin decodificar
+                detail.get("object", {}).get("etag", ""))
+    registros = event.get("Records") or []
     if registros:
         s3e = registros[0].get("s3", {})
         return (s3e.get("bucket", {}).get("name", ""),
@@ -106,197 +106,197 @@ def _origen(evento: Dict[str, Any]) -> Tuple[str, str, str]:
     raise ValueError("evento no reconocido: ni EventBridge ni notificacion de S3")
 
 
-def _id_lote(bucket: str, key: str, etag: str) -> str:
+def _batch_id(bucket: str, key: str, etag: str) -> str:
     """Id determinista: una reentrega del mismo objeto no crea un lote nuevo."""
     semilla = f"{bucket}/{key}/{etag}".encode("utf-8")
     return "b_" + hashlib.sha256(semilla).hexdigest()[:24]
 
 
-class EscaneoCacheado:
+class CachedScan:
     """El system block es ~72% del payload y es identico en todas las
     peticiones del lote. Escanearlo una vez por peticion es tirar el tiempo:
     se cachea por hash del texto."""
 
     def __init__(self) -> None:
-        self._cache: Dict[str, List[Hallazgo]] = {}
-        self.aciertos = 0
-        self.escaneos = 0
+        self._cache: Dict[str, List[Finding]] = {}
+        self.hits = 0
+        self.scans = 0
 
-    def escanear(self, texto: str, donde: str) -> List[Hallazgo]:
-        clave = hashlib.sha256(texto.encode("utf-8")).hexdigest()
-        if clave in self._cache:
-            self.aciertos += 1
+    def scan(self, text: str, where: str) -> List[Finding]:
+        key_ = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        if key_ in self._cache:
+            self.hits += 1
             # Los hallazgos se reetiquetan con la ruta de ESTA aparicion.
-            return [Hallazgo(h.capa, h.tipo, donde, h.detalle, h.duro)
-                    for h in self._cache[clave]]
-        self.escaneos += 1
-        hallazgos = escanear_texto(texto, donde)
-        self._cache[clave] = [Hallazgo(h.capa, h.tipo, "", h.detalle, h.duro)
-                              for h in hallazgos]
-        return hallazgos
+            return [Finding(h.layer, h.type, where, h.detail, h.hard)
+                    for h in self._cache[key_]]
+        self.scans += 1
+        findings = scan_text(text, where)
+        self._cache[key_] = [Finding(h.layer, h.type, "", h.detail, h.hard)
+                              for h in findings]
+        return findings
 
 
-def lambda_handler(evento: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     require("RAW_BUCKET", "CLEAN_BUCKET", "QUARANTINE_BUCKET", "BATCHES_TABLE")
-    arranque = time.monotonic()
+    started = time.monotonic()
 
-    bucket, key, etag = _origen(evento)
+    bucket, key, etag = _source(event)
     if not bucket or not key:
         raise ValueError("el evento no trae bucket/key")
     # El manifiesto lo procesa el submitter. Terraform filtra por sufijo, pero
     # un filtro se puede desconfigurar y esta guarda cuesta dos lineas: si el
     # sanitizer lo tratara como lote, lo mandaria a cuarentena por no tener
     # 'requests' y el envio nunca se dispararia.
-    if key.endswith(MANIFIESTO):
+    if key.endswith(MANIFEST):
         log.info("manifiesto ignorado por el sanitizer", extra={"ctx_key": key})
-        return {"omitido": "es un manifiesto", "key": key}
+        return {"skipped": "es un manifiesto", "key": key}
 
-    lote = _id_lote(bucket, key, etag)
-    carpeta = store.lote_de(key)
+    batch = _batch_id(bucket, key, etag)
+    folder = store.batch_of(key)
 
-    log.info("lote recibido", extra={"ctx_batch_id": lote, "ctx_key": key})
+    log.info("lote recibido", extra={"ctx_batch_id": batch, "ctx_key": key})
 
     cabecera = _s3.head_object(Bucket=bucket, Key=key)
-    tamano = cabecera["ContentLength"]
-    if tamano > MAX_RAW_BYTES:
+    size = cabecera["ContentLength"]
+    if size > MAX_RAW_BYTES:
         # Fail-closed: si no cabe en memoria no se puede escanear entero, y un
         # lote a medio escanear no se envia. El upgrade es Distributed Map.
-        return _cuarentena(lote, bucket, key, tamano, [], 0,
-                           f"el objeto son {tamano} bytes y el maximo es {MAX_RAW_BYTES}")
+        return _quarantine(batch, bucket, key, size, [], 0,
+                           f"el objeto son {size} bytes y el maximo es {MAX_RAW_BYTES}")
 
     crudo = _s3.get_object(Bucket=bucket, Key=key)["Body"].read()
     try:
         documento = json.loads(crudo)
     except json.JSONDecodeError as exc:
-        return _cuarentena(lote, bucket, key, tamano, [], 0, f"JSON invalido: {exc}")
+        return _quarantine(batch, bucket, key, size, [], 0, f"JSON invalido: {exc}")
     finally:
         del crudo
 
     try:
-        peticiones, metadata, hallazgos_raiz = leer_raiz(documento)
-    except EnvelopeInvalido as exc:
-        return _cuarentena(lote, bucket, key, tamano, [], 0, f"envelope invalido: {exc}")
+        requests, metadata, root_findings = read_root(documento)
+    except InvalidEnvelope as exc:
+        return _quarantine(batch, bucket, key, size, [], 0, f"envelope invalido: {exc}")
 
-    total = len(peticiones)
+    total = len(requests)
     if total > MAX_REQUESTS_PER_BATCH:
-        return _cuarentena(lote, bucket, key, tamano, [], total,
+        return _quarantine(batch, bucket, key, size, [], total,
                            f"{total} peticiones; el maximo es {MAX_REQUESTS_PER_BATCH}")
 
-    es_canario = key.startswith(CANARY_PREFIX)
-    store.create(lote, raw_key=f"{bucket}/{key}", request_count=total,
-                 es_canario=es_canario)
+    is_canary = key.startswith(CANARY_PREFIX)
+    store.create(batch, raw_key=f"{bucket}/{key}", request_count=total,
+                 is_canary=is_canary)
 
-    cache = EscaneoCacheado()
-    limpias: List[Dict[str, Any]] = []
-    rechazos: List[Dict[str, Any]] = []
-    todos: List[Hallazgo] = list(hallazgos_raiz)
+    cache = CachedScan()
+    clean_requests: List[Dict[str, Any]] = []
+    rejections: List[Dict[str, Any]] = []
+    all_found: List[Finding] = list(root_findings)
     ids_vistos = set()
 
-    for indice, peticion in enumerate(peticiones):
-        ruta = f"requests[{indice}]"
+    for index, request in enumerate(requests):
+        path = f"requests[{index}]"
         try:
-            normalizada, textos, hallazgos = normalizar_peticion(
-                peticion, indice, ALLOWED_MODELS, DEFAULT_MAX_TOKENS)
-        except EnvelopeInvalido as exc:
-            rechazos.append({"indice": indice, "motivo": "envelope", "detalle": str(exc)})
-            todos.append(Hallazgo(1, "estructura", ruta, str(exc)[:120]))
+            normalizada, texts, findings = normalize_request(
+                request, index, ALLOWED_MODELS, DEFAULT_MAX_TOKENS)
+        except InvalidEnvelope as exc:
+            rejections.append({"index": index, "reason": "envelope", "detail": str(exc)})
+            all_found.append(Finding(1, "estructura", path, str(exc)[:120]))
             continue
 
         custom_id = normalizada["custom_id"]
         if custom_id in ids_vistos:
-            rechazos.append({"indice": indice, "motivo": "envelope",
-                             "detalle": f"custom_id repetido: {custom_id}"})
+            rejections.append({"index": index, "reason": "envelope",
+                             "detail": f"custom_id repetido: {custom_id}"})
             continue
         ids_vistos.add(custom_id)
 
-        for donde, texto in textos:
-            hallazgos.extend(cache.escanear(texto, donde))
+        for where, text in texts:
+            findings.extend(cache.scan(text, where))
 
-        duros = [h for h in hallazgos if h.duro]
-        if duros:
+        hard_ones = [h for h in findings if h.hard]
+        if hard_ones:
             # SAD nunca es almacenable, ni cifrado. Encontrarlo no es "una
             # peticion mala": es que el productor esta mandando datos que no
             # deberia tener. Se aborta el lote entero sin mirar el resto.
-            todos.extend(hallazgos)
-            # El canario planta un track2 a proposito: que lo bloqueemos es la
+            all_found.extend(findings)
+            # El canary planta un track2 a proposito: que lo bloqueemos es la
             # buena noticia, no una incidencia. Si compartiera metrica con los
             # productores, la alarma sonaria cada dia por un exito y en dos
             # semanas nadie la miraria — que es justo cuando deja de servir.
-            if es_canario:
-                _metrica("CanarioBloqueoDuro", 1)
+            if is_canary:
+                _metric("CanaryHardBlock", 1)
             else:
-                _metrica("BloqueoDuro", 1)
+                _metric("HardBlock", 1)
             log.error("bloqueo duro: SAD detectado",
-                      extra={"ctx_batch_id": lote, "ctx_donde": duros[0].donde,
-                             "ctx_detalle": duros[0].detalle})
-            return _cuarentena(lote, bucket, key, tamano, todos, total,
-                               f"bloqueo duro en {ruta}: {duros[0].detalle}",
-                               duro=True, rechazos=rechazos)
+                      extra={"ctx_batch_id": batch, "ctx_where": hard_ones[0].where,
+                             "ctx_detail": hard_ones[0].detail})
+            return _quarantine(batch, bucket, key, size, all_found, total,
+                               f"bloqueo duro en {path}: {hard_ones[0].detail}",
+                               hard=True, rejections=rejections)
 
-        if hallazgos:
-            todos.extend(hallazgos)
-            rechazos.append({"indice": indice, "motivo": "contenido",
-                             "hallazgos": [h.como_dict() for h in hallazgos]})
+        if findings:
+            all_found.extend(findings)
+            rejections.append({"index": index, "reason": "contenido",
+                             "findings": [h.as_dict() for h in findings]})
             continue
 
-        limpias.append(normalizada)
+        clean_requests.append(normalizada)
 
     # --- GATE ---------------------------------------------------------------
-    rechazadas = len(rechazos)
-    porcentaje = (rechazadas / total * 100) if total else 0.0
-    _metrica("PeticionesRechazadas", rechazadas)
-    _metrica("PorcentajeRechazo", porcentaje, "Percent")
+    rejected_count = len(rejections)
+    porcentaje = (rejected_count / total * 100) if total else 0.0
+    _metric("RequestsRejected", rejected_count)
+    _metric("RejectionRate", porcentaje, "Percent")
 
-    if rechazadas and (porcentaje >= GATE_REJECT_PCT or rechazadas >= GATE_REJECT_ABS):
+    if rejected_count and (porcentaje >= GATE_REJECT_PCT or rejected_count >= GATE_REJECT_ABS):
         # El gate no mira peticiones sueltas, mira el lote. Muchos rechazos no
         # son errores dispersos: son un productor mandando CHD de forma
         # sistematica, y dejar pasar "solo las buenas" seria normalizarlo.
-        return _cuarentena(
-            lote, bucket, key, tamano, todos, total,
-            f"gate: {rechazadas}/{total} rechazadas ({porcentaje:.2f}%) "
+        return _quarantine(
+            batch, bucket, key, size, all_found, total,
+            f"gate: {rejected_count}/{total} rechazadas ({porcentaje:.2f}%) "
             f"supera el umbral ({GATE_REJECT_PCT}% o {GATE_REJECT_ABS} absolutas)",
-            rechazos=rechazos)
+            rejections=rejections)
 
-    if not limpias:
-        return _cuarentena(lote, bucket, key, tamano, todos, total,
-                           "no queda ninguna peticion limpia", rechazos=rechazos)
+    if not clean_requests:
+        return _quarantine(batch, bucket, key, size, all_found, total,
+                           "no queda ninguna peticion limpia", rejections=rejections)
 
     # --- a la zona limpia ---------------------------------------------------
-    clean_key = f"clean/{lote}.json"
-    cuerpo = json.dumps({
-        "batch_id": lote,
-        "requests": limpias,
+    clean_key = f"clean/{batch}.json"
+    body = json.dumps({
+        "batch_id": batch,
+        "requests": clean_requests,
         "metadata": metadata,
-        "sanitizado_en": store.now_iso(),
+        "sanitized_at": store.now_iso(),
     }, ensure_ascii=False).encode("utf-8")
 
-    _s3.put_object(Bucket=CLEAN_BUCKET, Key=clean_key, Body=cuerpo,
+    _s3.put_object(Bucket=CLEAN_BUCKET, Key=clean_key, Body=body,
                    ContentType="application/json",
-                   Metadata={"batch-id": lote, "requests": str(len(limpias))})
+                   Metadata={"batch-id": batch, "request-count": str(len(clean_requests))})
 
-    store.update(lote, status=Status.LIMPIO, clean_key=clean_key,
-                 request_count=len(limpias), rechazadas=rechazadas,
-                 sanitizado_en=store.now_iso())
+    store.update(batch, status=Status.CLEAN_, clean_key=clean_key,
+                 request_count=len(clean_requests), rejected_count=rejected_count,
+                 sanitized_at=store.now_iso())
 
-    _escribir_estado(lote, Status.LIMPIO, key, total, len(limpias),
-                     rechazos, todos, motivo="")
-    _registrar_parte(carpeta, key, limpia=True,
-                     request_count=len(limpias), clean_key=clean_key)
+    _write_status(batch, Status.CLEAN_, key, total, len(clean_requests),
+                     rejections, all_found, reason="")
+    _record_part(folder, key, cleaned=True,
+                     request_count=len(clean_requests), clean_key=clean_key)
 
-    ms = round((time.monotonic() - arranque) * 1000)
-    _metrica("PeticionesLimpias", len(limpias))
+    ms = round((time.monotonic() - started) * 1000)
+    _metric("RequestsClean", len(clean_requests))
     log.info("lote sanitizado", extra={
-        "ctx_batch_id": lote, "ctx_limpias": len(limpias), "ctx_rechazadas": rechazadas,
-        "ctx_escaneos": cache.escaneos, "ctx_cache_aciertos": cache.aciertos, "ctx_ms": ms,
+        "ctx_batch_id": batch, "ctx_clean": len(clean_requests), "ctx_rejected": rejected_count,
+        "ctx_scans": cache.scans, "ctx_cache_hits": cache.hits, "ctx_ms": ms,
     })
-    return {"batch_id": lote, "estado": Status.LIMPIO,
-            "limpias": len(limpias), "rechazadas": rechazadas, "ms": ms}
+    return {"batch_id": batch, "status": Status.CLEAN_,
+            "clean": len(clean_requests), "rejected": rejected_count, "ms": ms}
 
 
-def _cuarentena(lote: str, bucket: str, key: str, tamano: int,
-                hallazgos: List[Hallazgo], total: int, motivo: str,
-                duro: bool = False,
-                rechazos: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+def _quarantine(batch: str, bucket: str, key: str, size: int,
+                findings: List[Finding], total: int, reason: str,
+                hard: bool = False,
+                rejections: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
     """Deja constancia en cuarentena y no cruza nada.
 
     El informe guarda PUNTEROS al objeto raw, no una copia. Copiar el payload
@@ -304,50 +304,50 @@ def _cuarentena(lote: str, bucket: str, key: str, tamano: int,
     dentro del CDE y con su propio ciclo de vida, que es donde debe mirarse.
     """
     informe = {
-        "batch_id": lote,
-        "motivo": motivo,
-        "bloqueo_duro": duro,
-        "origen": {"bucket": bucket, "key": key, "bytes": tamano},
-        "peticiones": total,
-        "hallazgos": [h.como_dict() for h in hallazgos][:1000],
-        "resumen_por_capa": _resumen(hallazgos),
-        "cuarentena_en": store.now_iso(),
+        "batch_id": batch,
+        "reason": reason,
+        "hard_block": hard,
+        "source": {"bucket": bucket, "key": key, "bytes": size},
+        "request_count": total,
+        "findings": [h.as_dict() for h in findings][:1000],
+        "summary_by_layer": _summary(findings),
+        "quarantined_at": store.now_iso(),
     }
     _s3.put_object(
         Bucket=QUARANTINE_BUCKET,
-        Key=f"quarantine/{lote}.json",
+        Key=f"quarantine/{batch}.json",
         Body=json.dumps(informe, ensure_ascii=False).encode("utf-8"),
         ContentType="application/json",
     )
     try:
-        store.update(lote, status=Status.CUARENTENA, motivo=motivo[:500])
+        store.update(batch, status=Status.QUARANTINED, reason=reason[:500])
     except Exception:  # noqa: BLE001 — el lote puede no estar registrado aun
-        store.create(lote, raw_key=f"{bucket}/{key}", request_count=total,
-                     status=Status.CUARENTENA, motivo=motivo[:500])
+        store.create(batch, raw_key=f"{bucket}/{key}", request_count=total,
+                     status=Status.QUARANTINED, reason=reason[:500])
 
     # Los rechazos viajan al parte: sin ellos el productor lee "rechazadas: 0"
     # junto a un motivo que dice "1/3 rechazadas", y no sabe que peticion mirar.
-    _escribir_estado(lote, Status.CUARENTENA, key, total, 0,
-                     rechazos or [], hallazgos, motivo)
+    _write_status(batch, Status.QUARANTINED, key, total, 0,
+                     rejections or [], findings, reason)
 
     # La parte rechazada tambien se cuenta: es lo que hace que el lote pase a
     # CUARENTENA en vez de quedarse esperando una parte que nunca va a llegar
     # limpia. Un lote a medias es peor que un lote rechazado.
-    _registrar_parte(store.lote_de(key), key, limpia=False)
+    _record_part(store.batch_of(key), key, cleaned=False)
 
     if key.startswith(CANARY_PREFIX):
-        _metrica("CanarioEnCuarentena", 1)
+        _metric("CanaryQuarantined", 1)
     else:
-        _metrica("LotesEnCuarentena", 1)
+        _metric("BatchesQuarantined", 1)
     log.error("lote en cuarentena", extra={
-        "ctx_batch_id": lote, "ctx_motivo": motivo, "ctx_duro": duro,
-        "ctx_hallazgos": len(hallazgos)})
-    return {"batch_id": lote, "estado": Status.CUARENTENA, "motivo": motivo}
+        "ctx_batch_id": batch, "ctx_reason": reason, "ctx_hard": hard,
+        "ctx_findings": len(findings)})
+    return {"batch_id": batch, "status": Status.QUARANTINED, "reason": reason}
 
 
-#: que hacer segun lo que disparo. Sin esto el productor recibe un veredicto y
+#: que hacer segun lo que disparo. Sin esto el productor recibe un verdict y
 #: ninguna pista, y acaba escribiendo a infraestructura en cada rechazo.
-_QUE_HACER = {
+_WHAT_TO_DO = {
     "pan": "Se detecto un numero de tarjeta en texto libre. Quitalo del origen: "
            "el proxy no lo enmascara, lo bloquea.",
     "sad_track": "Se detectaron datos de banda magnetica. Nunca son almacenables, "
@@ -355,81 +355,81 @@ _QUE_HACER = {
     "sad_cvv": "Se detecto un CVV junto a palabras que lo identifican. "
                "Los codigos de verificacion no pueden salir del entorno.",
     "sad_pin": "Se detecto un PIN en contexto. Revisa el origen de los datos.",
-    "campo": "Un campo con nombre reservado (pan, cvv, track...) fue destruido. "
+    "field": "Un campo con nombre reservado (pan, cvv, track...) fue destruido. "
              "Renombralo o quitalo del payload.",
-    "binario": "Se detecto contenido binario o base64. Solo se admite texto.",
+    "binary": "Se detecto contenido binario o base64. Solo se admite texto.",
     "estructura": "El lote no cumple el esquema. Solo se permiten las claves "
                   "documentadas: custom_id, params.model, params.max_tokens, "
                   "params.messages, params.system.",
 }
 
 
-def _escribir_estado(lote: str, estado: str, key: str, recibidas: int,
-                     limpias: int, rechazos: List[Dict[str, Any]],
-                     hallazgos: List[Hallazgo], motivo: str) -> None:
+def _write_status(batch: str, state: str, key: str, received_count: int,
+                     clean_requests: int, rejections: List[Dict[str, Any]],
+                     findings: List[Finding], reason: str) -> None:
     """Deja un parte de estado que el productor SI puede leer.
 
-    Va al bucket clean, bajo 'estado/', por dos razones:
+    Va al bucket clean, bajo 'status/', por dos razones:
 
       · clean esta fuera del CDE, asi que leerlo no exige la clave del CDE ni
         mete a quien lo lea en el alcance PCI.
       · el sanitizer ya escribe ahi, asi que no hace falta ampliarle permisos.
 
-    El prefijo 'estado/' no dispara al verificador, que escucha en 'clean/'.
+    El prefijo 'status/' no dispara al verifier, que escucha en 'clean/'.
 
-    Lo que va dentro son conteos, capas y rutas — nunca valores. Ademas se pasa
+    Lo que va dentro son conteos, capas y paths — nunca valores. Ademas se pasa
     todo por el mismo scrub que protege los logs: este documento cruza la
     frontera, y conviene que sea incapaz de llevar un PAN aunque alguien
     introduzca un mensaje de error descuidado mas adelante.
     """
-    detalle_rechazos = []
-    for rechazo in rechazos[:200]:
-        entrada = {"indice": rechazo.get("indice"), "motivo": rechazo.get("motivo")}
-        if rechazo.get("detalle"):
-            entrada["detalle"] = scrub(rechazo["detalle"])
-        if rechazo.get("hallazgos"):
-            entrada["hallazgos"] = [
-                {"capa": h["capa"], "tipo": h["tipo"],
-                 "donde": scrub(h["donde"]), "detalle": scrub(h["detalle"])}
-                for h in rechazo["hallazgos"]
+    rejection_detail = []
+    for rejection in rejections[:200]:
+        entry = {"index": rejection.get("index"), "reason": rejection.get("reason")}
+        if rejection.get("detail"):
+            entry["detail"] = scrub(rejection["detail"])
+        if rejection.get("findings"):
+            entry["findings"] = [
+                {"layer": h["layer"], "type": h["type"],
+                 "where": scrub(h["where"]), "detail": scrub(h["detail"])}
+                for h in rejection["findings"]
             ]
-        detalle_rechazos.append(entrada)
+        rejection_detail.append(entry)
 
-    tipos = {h.tipo for h in hallazgos}
-    consejos = [_QUE_HACER[t] for t in sorted(tipos) if t in _QUE_HACER]
+    types = {h.type for h in findings}
+    consejos = [_WHAT_TO_DO[t] for t in sorted(types) if t in _WHAT_TO_DO]
 
-    parte = {
-        "batch_id": lote,
-        "estado": estado,
-        "origen": key,
-        "peticiones": {
-            "recibidas": recibidas,
-            "limpias": limpias,
-            "rechazadas": len(rechazos),
+    part = {
+        "batch_id": batch,
+        "status": state,
+        "source": key,
+        "request_counts": {
+            "received": received_count,
+            "clean": clean_requests,
+            "rejected": len(rejections),
         },
-        "motivo": scrub(motivo) if motivo else "",
-        "rechazos": detalle_rechazos,
-        "resumen_por_capa": _resumen(hallazgos),
-        "que_hacer": consejos,
-        "actualizado_en": store.now_iso(),
+        "reason": scrub(reason) if reason else "",
+        "rejections": rejection_detail,
+        "summary_by_layer": _summary(findings),
+        "what_to_do": consejos,
+        "updated_at": store.now_iso(),
     }
-    if len(rechazos) > 200:
-        parte["nota"] = f"se listan 200 de {len(rechazos)} rechazos"
+    if len(rejections) > 200:
+        part["nota"] = f"se listan 200 de {len(rejections)} rechazos"
 
     try:
         _s3.put_object(
-            Bucket=CLEAN_BUCKET, Key=f"estado/{lote}.json",
-            Body=json.dumps(parte, ensure_ascii=False, indent=2).encode("utf-8"),
+            Bucket=CLEAN_BUCKET, Key=f"status/{batch}.json",
+            Body=json.dumps(part, ensure_ascii=False, indent=2).encode("utf-8"),
             ContentType="application/json",
-            Metadata={"batch-id": lote, "estado": estado})
+            Metadata={"batch-id": batch, "status": state})
     except Exception:  # noqa: BLE001 — informar no puede tumbar la sanitizacion
         log.warning("no se pudo escribir el parte de estado",
-                    extra={"ctx_batch_id": lote})
+                    extra={"ctx_batch_id": batch})
 
 
-def _resumen(hallazgos: List[Hallazgo]) -> Dict[str, int]:
+def _summary(findings: List[Finding]) -> Dict[str, int]:
     resumen: Dict[str, int] = {}
-    for h in hallazgos:
-        clave = f"capa{h.capa}_{h.tipo}"
-        resumen[clave] = resumen.get(clave, 0) + 1
+    for h in findings:
+        key_ = f"layer{h.layer}_{h.type}"
+        resumen[key_] = resumen.get(key_, 0) + 1
     return resumen

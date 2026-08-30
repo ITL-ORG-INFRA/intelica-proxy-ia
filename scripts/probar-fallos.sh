@@ -16,7 +16,7 @@
 # Cada caso declara que deberia pasar y el script lo comprueba. No es una
 # demostracion: si el sistema deja de comportarse asi, esto lo dice.
 #
-#   ./scripts/probar-fallos.sh dev            todos los casos
+#   ./scripts/probar-fallos.sh dev            todos los cases
 #   ./scripts/probar-fallos.sh dev 3          solo el caso 3
 # ---------------------------------------------------------------------------
 set -Eeuo pipefail
@@ -62,7 +62,7 @@ OK=0; FALLOS=0; OMITIDOS=0
 printf '%s==>%s %sDestino%s\n' "$AZUL" "$R" "$B" "$R"
 dato "cuenta ${CUENTA} · region ${REGION} · entorno ${ENTORNO}"
 dato "prefijo de esta tanda: fallos/${SELLO}"
-printf '\n    %sOJO:%s varios casos disparan la alarma LotesEnCuarentena.\n' "$AMBAR" "$R"
+printf '\n    %sOJO:%s varios cases disparan la alarma BatchesQuarantined.\n' "$AMBAR" "$R"
 printf '    Es correcto, pero avisa a quien reciba las alarmas.\n'
 
 # --- utilidades -------------------------------------------------------------
@@ -94,7 +94,7 @@ esperar_parte() {  # esperar_parte <batch_id> [segundos]
   local lote="$1" limite="${2:-$ESPERA}" parte=""
   printf '    %sesperando%s' "$D" "$R"
   for _ in $(seq 1 "$limite"); do
-    if parte="$("${AWS[@]}" s3 cp "s3://${CLEAN}/estado/${lote}.json" - 2>/dev/null)"; then
+    if parte="$("${AWS[@]}" s3 cp "s3://${CLEAN}/status/${lote}.json" - 2>/dev/null)"; then
       [[ -n "$parte" ]] && { printf '\n'; echo "$parte"; return 0; }
     fi
     printf '.'; sleep 1
@@ -108,7 +108,7 @@ esperar_lote() {  # esperar_lote <carpeta> <estado1|estado2> [segundos]
   printf '    %sesperando%s' "$D" "$R"
   for _ in $(seq 1 "$limite"); do
     item="$("${AWS[@]}" dynamodb get-item --table-name "$TABLA" \
-            --key "$(jq -nc --arg k "lote#${carpeta}" '{batch_id:{S:$k}}')" 2>/dev/null || echo '{}')"
+            --key "$(jq -nc --arg k "batch#${carpeta}" '{batch_id:{S:$k}}')" 2>/dev/null || echo '{}')"
     estado="$(jq -r '.Item.status.S // ""' <<<"$item")"
     if [[ -n "$estado" ]] && [[ "|$quiero|" == *"|$estado|"* ]]; then
       printf '\n'; echo "$item"; return 0
@@ -138,9 +138,9 @@ if quiere_caso 1; then
   clave="$(printf 'esto no es json {{{' | subir "caso1/roto.json" -)"
   lote="$(id_lote "$clave")"
   if parte="$(esperar_parte "$lote")"; then
-    estado="$(jq -r .estado <<<"$parte")"
-    motivo="$(jq -r .motivo <<<"$parte")"
-    [[ "$estado" == "cuarentena" ]] && bien "cuarentena" || mal "estado=${estado}"
+    estado="$(jq -r .status <<<"$parte")"
+    motivo="$(jq -r .reason <<<"$parte")"
+    [[ "$estado" == "quarantined" ]] && bien "quarantined" || mal "estado=${estado}"
     [[ "$motivo" == *"JSON invalido"* ]] \
       && bien "motivo lo explica: ${motivo:0:60}" \
       || mal "motivo inesperado: ${motivo:0:70}"
@@ -158,9 +158,9 @@ if quiere_caso 2; then
   clave="$(printf '{"metadata":{"caso":"sin requests"}}' | subir "caso2/vacio.json" -)"
   lote="$(id_lote "$clave")"
   if parte="$(esperar_parte "$lote")"; then
-    estado="$(jq -r .estado <<<"$parte")"
-    motivo="$(jq -r .motivo <<<"$parte")"
-    [[ "$estado" == "cuarentena" ]] && bien "cuarentena" || mal "estado=${estado}"
+    estado="$(jq -r .status <<<"$parte")"
+    motivo="$(jq -r .reason <<<"$parte")"
+    [[ "$estado" == "quarantined" ]] && bien "quarantined" || mal "estado=${estado}"
     [[ "$motivo" == *"envelope invalido"* ]] \
       && bien "motivo lo explica: ${motivo:0:60}" \
       || mal "motivo inesperado: ${motivo:0:70}"
@@ -180,7 +180,7 @@ if quiere_caso 3; then
   printf '{no es json' | subir "caso3/_MANIFEST.json" - >/dev/null
   if item="$(esperar_lote "$carpeta" "fallido" 40)"; then
     bien "lote marcado fallido"
-    dato "motivo: $(jq -r '.Item.motivo.S // "-"' <<<"$item")"
+    dato "motivo: $(jq -r '.Item.reason.S // "-"' <<<"$item")"
   else
     mal "estado=$(jq -r '.Item.status.S // "sin item"' <<<"$item")"
   fi
@@ -198,7 +198,7 @@ if quiere_caso 4; then
 
   if item="$(esperar_lote "$carpeta" "esperando_partes" 30)"; then
     bien "queda esperando_partes"
-    dato "limpias=$(jq -r '.Item.partes_limpias.N // 0' <<<"$item")/$(jq -r '.Item.partes_esperadas.N // 0' <<<"$item")"
+    dato "limpias=$(jq -r '.Item.clean_parts.N // 0' <<<"$item")/$(jq -r '.Item.expected_parts.N // 0' <<<"$item")"
   else
     mal "estado=$(jq -r '.Item.status.S // "sin item"' <<<"$item")"
   fi
@@ -239,9 +239,9 @@ if quiere_caso 5; then
   jq -nc '{lote:"caso5", files:["parte-01.json","parte-02.json"], total_requests:2}' \
     | subir "caso5/_MANIFEST.json" - >/dev/null
 
-  if item="$(esperar_lote "$carpeta" "cuarentena" 60)"; then
+  if item="$(esperar_lote "$carpeta" "quarantined" 60)"; then
     bien "lote en cuarentena"
-    dato "rechazadas=$(jq -r '.Item.partes_rechazadas.N // 0' <<<"$item") · limpias=$(jq -r '.Item.partes_limpias.N // 0' <<<"$item")"
+    dato "rechazadas=$(jq -r '.Item.rejected_parts.N // 0' <<<"$item") · limpias=$(jq -r '.Item.clean_parts.N // 0' <<<"$item")"
     ids="$(jq -r '[.Item.batch_ids.L[]?.S] | length' <<<"$item")"
     [[ "$ids" == "0" ]] \
       && bien "no se envio ningun batch a Anthropic" \
@@ -268,7 +268,7 @@ if quiere_caso 6; then
 
   if item="$(esperar_lote "$carpeta" "fallido" 60)"; then
     bien "lote fallido"
-    motivo="$(jq -r '.Item.motivo.S // "-"' <<<"$item")"
+    motivo="$(jq -r '.Item.reason.S // "-"' <<<"$item")"
     [[ "$motivo" == *"colision"* ]] \
       && bien "nombra el id duplicado: ${motivo}" \
       || mal "el motivo no dice cual: ${motivo}"
@@ -297,7 +297,7 @@ cat <<AYUDA
       · Fichero por encima de MAX_RAW_BYTES (100 MB). Subirlo cuesta mas de lo
         que aporta; la ruta esta cubierta en las pruebas unitarias.
       · Lote expirado a las 24 h. Habria que esperar 24 h.
-      · Un hallazgo del verificador. Exigiria envenenar clean/ a mano, que es
+      · Un hallazgo del verifier. Exigiria envenenar clean/ a mano, que es
         justo lo que su rol impide.
       · 429 de Anthropic. Necesita volumen real.
 

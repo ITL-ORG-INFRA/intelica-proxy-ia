@@ -36,7 +36,7 @@ def scrub(value: Any) -> Any:
     if value is None:
         return None
     text = str(value)
-    text = _DIGIT_RUN.sub("[DIGITOS]", text)
+    text = _DIGIT_RUN.sub("[DIGITS]", text)
     if len(text) > MAX_VALUE_CHARS:
         text = text[:MAX_VALUE_CHARS] + "…[truncado]"
     return text

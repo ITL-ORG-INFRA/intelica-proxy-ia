@@ -290,8 +290,8 @@ Los equipos que mandan lotes (p.ej. Cuotas) necesitan un permission set de
 Identity Center acotado. La política está en
 [PARA-PRODUCTORES.md](PARA-PRODUCTORES.md); lo que importa del diseño es:
 
-- **Escritura** en `raw/entrada/*` y `kms:GenerateDataKey` sobre CMK-raw.
-- **Lectura** en `clean/estado/*` y en `results/*`, con `kms:Decrypt` sólo sobre
+- **Escritura** en `raw/input/*` y `kms:GenerateDataKey` sobre CMK-raw.
+- **Lectura** en `clean/status/*` y en `results/*`, con `kms:Decrypt` sólo sobre
   **CMK-clean**.
 - **Nunca** lectura sobre `raw` ni `kms:Decrypt` sobre CMK-raw. Un productor que
   pueda releer lo que subió es una vía de salida de CHD del CDE, y mete su

@@ -13,16 +13,16 @@ from normalize import as_text, decode_base64_blobs, sniff_binary
 
 
 @dataclass
-class Hallazgo:
-    capa: int
-    tipo: str          # "pan" | "sad_track" | "sad_cvv" | "sad_pin" | "campo" | "binario"
-    donde: str         # ruta dentro del envelope, p.ej. "requests[3].params.messages[0]"
-    detalle: str = ""  # marca, longitud, formato — nunca el valor
-    duro: bool = False  # aborta el lote entero, no solo la peticion
+class Finding:
+    layer: int
+    type: str          # "pan" | "sad_track" | "sad_cvv" | "sad_pin" | "campo" | "binario"
+    where: str         # ruta dentro del envelope, p.ej. "requests[3].params.messages[0]"
+    detail: str = ""  # marca, longitud, formato — nunca el valor
+    hard: bool = False  # aborta el lote entero, no solo la peticion
 
-    def como_dict(self) -> Dict[str, Any]:
-        return {"capa": self.capa, "tipo": self.tipo, "donde": self.donde,
-                "detalle": self.detalle, "duro": self.duro}
+    def as_dict(self) -> Dict[str, Any]:
+        return {"layer": self.layer, "type": self.type, "where": self.where,
+                "detail": self.detail, "hard": self.hard}
 
 
 # ---------------------------------------------------------------------------
@@ -30,10 +30,10 @@ class Hallazgo:
 # ---------------------------------------------------------------------------
 
 #: tirada continua de 13 a 19 digitos
-_PAN_CONTIGUO = re.compile(r"(?<![\d])(\d{13,19})(?![\d])")
+_PAN_CONTIGUOUS = re.compile(r"(?<![\d])(\d{13,19})(?![\d])")
 
 #: grupos separados por espacio o guion: 4-4-4-4 y sus variantes de 13 a 19
-_PAN_AGRUPADO = re.compile(
+_PAN_GROUPED = re.compile(
     r"(?<![\d])(\d{4}[ \-]\d{4}[ \-]\d{4}[ \-]\d{1,7}|\d{4}[ \-]\d{6}[ \-]\d{4,5})(?![\d])"
 )
 
@@ -67,7 +67,7 @@ _IIN: List[Tuple[str, Tuple[int, ...], Tuple[str, ...], Tuple[Tuple[int, int, in
 ]
 
 
-def iin_marca(digits: str) -> str:
+def iin_brand(digits: str) -> str:
     """Devuelve la marca si el prefijo y la longitud encajan con una emisora.
 
     Luhn solo deja pasar 1 de cada 10 numeros al azar; exigir ademas un IIN
@@ -75,41 +75,41 @@ def iin_marca(digits: str) -> str:
     numeros de cuenta) sin dejar pasar ninguna de las marcas reales.
     """
     length = len(digits)
-    for marca, longitudes, prefijos, rangos in _IIN:
+    for brand, longitudes, prefixes, rangos in _IIN:
         if length not in longitudes:
             continue
-        if any(digits.startswith(p) for p in prefijos):
-            return marca
+        if any(digits.startswith(p) for p in prefixes):
+            return brand
         for desde, hasta, n in rangos:
             if length >= n and desde <= int(digits[:n]) <= hasta:
-                return marca
+                return brand
     return ""
 
 
-def _solo_digitos(texto: str) -> str:
-    return texto.replace(" ", "").replace("-", "")
+def _digits_only(text: str) -> str:
+    return text.replace(" ", "").replace("-", "")
 
 
-def find_pans(texto: str, donde: str) -> List[Hallazgo]:
-    hallazgos: List[Hallazgo] = []
+def find_pans(text: str, where: str) -> List[Finding]:
+    findings: List[Finding] = []
     vistos = set()
-    for patron, formato in ((_PAN_CONTIGUO, "contiguo"), (_PAN_AGRUPADO, "agrupado")):
-        for match in patron.finditer(texto):
-            digits = _solo_digitos(match.group(1))
+    for patron, fmt in ((_PAN_CONTIGUOUS, "contiguo"), (_PAN_GROUPED, "agrupado")):
+        for match in patron.finditer(text):
+            digits = _digits_only(match.group(1))
             if not 13 <= len(digits) <= 19 or digits in vistos:
                 continue
             if not luhn(digits):
                 continue
-            marca = iin_marca(digits)
-            if not marca:
+            brand = iin_brand(digits)
+            if not brand:
                 continue
             vistos.add(digits)
-            hallazgos.append(Hallazgo(
-                capa=3, tipo="pan", donde=donde,
+            findings.append(Finding(
+                layer=3, type="pan", where=where,
                 # Marca y longitud bastan para investigar. El numero, no.
-                detalle=f"{marca}/{len(digits)}d/{formato}",
+                detail=f"{brand}/{len(digits)}d/{fmt}",
             ))
-    return hallazgos
+    return findings
 
 
 # ---------------------------------------------------------------------------
@@ -122,49 +122,49 @@ _TRACK1 = re.compile(r"%[Bb]\d{12,19}\^[^\^]{2,26}\^\d{4}")
 #: banda 2: ;<pan>=<caducidad><codigo servicio>...?  (el ';' inicial es opcional)
 _TRACK2 = re.compile(r";?\d{12,19}[=Dd]\d{4}\d{3}")
 
-_CVV_PALABRAS = re.compile(
+_CVV_WORDS = re.compile(
     r"(?i)\b(cvv2?|cvc2?|cav2|cid|csc|c[oó]digo\s+de\s+seguridad|security\s+code|"
     r"card\s+verification)\b"
 )
-_PIN_PALABRAS = re.compile(r"(?i)\b(pin|pinblock|pin\s*block|clave\s+secreta)\b")
+_PIN_WORDS = re.compile(r"(?i)\b(pin|pinblock|pin\s*block|clave\s+secreta)\b")
 
 #: 3-4 digitos sueltos (CVV) o 4-6 (PIN) cerca de la palabra clave
-_CVV_VALOR = re.compile(r"(?<!\d)\d{3,4}(?!\d)")
-_PIN_VALOR = re.compile(r"(?<!\d)\d{4,6}(?!\d)")
+_CVV_VALUE = re.compile(r"(?<!\d)\d{3,4}(?!\d)")
+_PIN_VALUE = re.compile(r"(?<!\d)\d{4,6}(?!\d)")
 
 #: distancia maxima entre la palabra clave y el numero para considerarlo contexto
-_VENTANA = 40
+_WINDOW = 40
 
 
-def _cerca(texto: str, palabras: re.Pattern, valores: re.Pattern) -> bool:
-    posiciones = [m.end() for m in palabras.finditer(texto)]
+def _near(text: str, palabras: re.Pattern, values: re.Pattern) -> bool:
+    posiciones = [m.end() for m in palabras.finditer(text)]
     if not posiciones:
         return False
-    for match in valores.finditer(texto):
+    for match in values.finditer(text):
         for fin in posiciones:
-            if 0 <= match.start() - fin <= _VENTANA:
+            if 0 <= match.start() - fin <= _WINDOW:
                 return True
     return False
 
 
-def find_sad(texto: str, donde: str) -> List[Hallazgo]:
-    hallazgos: List[Hallazgo] = []
-    if _TRACK1.search(texto):
-        hallazgos.append(Hallazgo(4, "sad_track", donde, "track1", duro=True))
-    if _TRACK2.search(texto):
-        hallazgos.append(Hallazgo(4, "sad_track", donde, "track2", duro=True))
-    if _cerca(texto, _CVV_PALABRAS, _CVV_VALOR):
-        hallazgos.append(Hallazgo(4, "sad_cvv", donde, "cvv en contexto", duro=True))
-    if _cerca(texto, _PIN_PALABRAS, _PIN_VALOR):
-        hallazgos.append(Hallazgo(4, "sad_pin", donde, "pin en contexto", duro=True))
-    return hallazgos
+def find_sad(text: str, where: str) -> List[Finding]:
+    findings: List[Finding] = []
+    if _TRACK1.search(text):
+        findings.append(Finding(4, "sad_track", where, "track1", hard=True))
+    if _TRACK2.search(text):
+        findings.append(Finding(4, "sad_track", where, "track2", hard=True))
+    if _near(text, _CVV_WORDS, _CVV_VALUE):
+        findings.append(Finding(4, "sad_cvv", where, "cvv en contexto", hard=True))
+    if _near(text, _PIN_WORDS, _PIN_VALUE):
+        findings.append(Finding(4, "sad_pin", where, "pin en contexto", hard=True))
+    return findings
 
 
 # ---------------------------------------------------------------------------
 # Capa 2 — nombres de campo peligrosos
 # ---------------------------------------------------------------------------
 
-_CAMPOS_PROHIBIDOS = {
+_FORBIDDEN_FIELDS = {
     "pan", "cc", "ccnum", "cc_num", "ccnumber", "cc_number", "card", "cardnum",
     "card_num", "cardnumber", "card_number", "creditcard", "credit_card",
     "numero_tarjeta", "numerotarjeta", "num_tarjeta", "tarjeta", "nro_tarjeta",
@@ -176,39 +176,39 @@ _CAMPOS_PROHIBIDOS = {
 }
 
 
-def campo_prohibido(nombre: str) -> bool:
-    limpio = re.sub(r"[^a-z0-9]", "_", nombre.strip().lower()).strip("_")
-    return limpio in _CAMPOS_PROHIBIDOS
+def forbidden_field(name: str) -> bool:
+    clean_text = re.sub(r"[^a-z0-9]", "_", name.strip().lower()).strip("_")
+    return clean_text in _FORBIDDEN_FIELDS
 
 
 # ---------------------------------------------------------------------------
 # Capa 5 — binario embebido
 # ---------------------------------------------------------------------------
 
-def find_binario_y_base64(texto: str, donde: str) -> Tuple[List[Hallazgo], List[str]]:
+def find_binary_and_base64(text: str, where: str) -> Tuple[List[Finding], List[str]]:
     """Revisa lo que venga en base64.
 
     Devuelve los hallazgos y los textos decodificados, para que quien llame
     vuelva a pasarles las capas 3 y 4: un PAN dentro de un base64 sigue siendo
     un PAN.
     """
-    hallazgos: List[Hallazgo] = []
-    textos: List[str] = []
-    for _blob, data in decode_base64_blobs(texto):
-        formato = sniff_binary(data)
-        if formato:
-            hallazgos.append(Hallazgo(
-                5, "binario", donde, f"{formato} en base64 ({len(data)} bytes)", duro=False))
+    findings: List[Finding] = []
+    texts: List[str] = []
+    for _blob, data in decode_base64_blobs(text):
+        fmt = sniff_binary(data)
+        if fmt:
+            findings.append(Finding(
+                5, "binary", where, f"{fmt} en base64 ({len(data)} bytes)", hard=False))
             continue
-        interior = as_text(data)
-        if interior:
-            textos.append(interior)
-    return hallazgos, textos
+        inner = as_text(data)
+        if inner:
+            texts.append(inner)
+    return findings, texts
 
 
-def find_data_uri(texto: str, donde: str) -> List[Hallazgo]:
-    if re.search(r"(?i)data:(image|application|video|audio)/[a-z0-9.+-]+;base64,", texto):
-        return [Hallazgo(5, "binario", donde, "data: URI", duro=False)]
+def find_data_uri(text: str, where: str) -> List[Finding]:
+    if re.search(r"(?i)data:(image|application|video|audio)/[a-z0-9.+-]+;base64,", text):
+        return [Finding(5, "binary", where, "data: URI", hard=False)]
     return []
 
 
@@ -216,20 +216,20 @@ def find_data_uri(texto: str, donde: str) -> List[Hallazgo]:
 # Escaneo completo de un texto
 # ---------------------------------------------------------------------------
 
-def escanear_texto(texto: str, donde: str) -> List[Hallazgo]:
+def scan_text(text: str, where: str) -> List[Finding]:
     """Pasa las capas 3, 4 y 5 sobre un texto ya normalizado."""
-    if not texto:
+    if not text:
         return []
-    hallazgos: List[Hallazgo] = []
-    hallazgos.extend(find_pans(texto, donde))
-    hallazgos.extend(find_sad(texto, donde))
-    hallazgos.extend(find_data_uri(texto, donde))
+    findings: List[Finding] = []
+    findings.extend(find_pans(text, where))
+    findings.extend(find_sad(text, where))
+    findings.extend(find_data_uri(text, where))
 
-    binarios, interiores = find_binario_y_base64(texto, donde)
-    hallazgos.extend(binarios)
-    for interior in interiores:
+    binaries, inners = find_binary_and_base64(text, where)
+    findings.extend(binaries)
+    for inner in inners:
         # Un nivel de anidamiento basta: si alguien mete base64 dentro de
         # base64 dentro de base64, el propio anidamiento ya es la senal.
-        hallazgos.extend(find_pans(interior, donde + "[base64]"))
-        hallazgos.extend(find_sad(interior, donde + "[base64]"))
-    return hallazgos
+        findings.extend(find_pans(inner, where + "[base64]"))
+        findings.extend(find_sad(inner, where + "[base64]"))
+    return findings

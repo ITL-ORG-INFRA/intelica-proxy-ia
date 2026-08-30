@@ -30,7 +30,7 @@ die()  { printf '\n\033[31merror:\033[0m %s\n' "$*" >&2; exit 1; }
 
 AWS=(aws --region "$REGION" --output json)
 P="${PROYECTO}-${ENTORNO}"
-FUNCIONES=(sanitizer verificador submitter reconciliador fetcher canario)
+FUNCIONES=(sanitizer verifier submitter reconciler fetcher canary)
 
 paso "Comparando ${ENTORNO} con dist/"
 printf '    %-16s %-10s %s\n' "FUNCION" "ESTADO" "DETALLE"

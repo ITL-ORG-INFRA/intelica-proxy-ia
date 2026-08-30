@@ -16,21 +16,21 @@ import sys
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(REPO, "src", "sanitizer"))
 
-from detectors import escanear_texto, find_pans, iin_marca, luhn  # noqa: E402
+from detectors import scan_text, find_pans, iin_brand, luhn  # noqa: E402
 from normalize import normalize  # noqa: E402
 
-FALLOS = []
+FAILURES = []
 
 
-def ck(nombre, condicion, detalle=""):
-    print(("  OK   " if condicion else "  FALLA ") + nombre
-          + ("" if condicion else f"  <- {detalle}"))
-    if not condicion:
-        FALLOS.append(nombre)
+def ck(name, condition, detail=""):
+    print(("  OK   " if condition else "  FALLA ") + name
+          + ("" if condition else f"  <- {detail}"))
+    if not condition:
+        FAILURES.append(name)
 
 
 #: una por marca y por longitud, para que ninguna rama de la tabla IIN quede sin tocar
-TARJETAS_DE_PRUEBA = [
+TEST_CARDS = [
     ("visa-16",     "4111111111111111"),
     ("visa-16b",    "4012888888881881"),
     ("visa-13",     "4222222222222"),
@@ -48,30 +48,30 @@ TARJETAS_DE_PRUEBA = [
 ]
 
 
-def prueba_tarjetas_conocidas():
+def test_known_cards():
     print("\n[1] tarjetas de prueba de todas las marcas")
-    for nombre, pan in TARJETAS_DE_PRUEBA:
-        hallazgos = find_pans(pan, "t")
-        ck(f"{nombre} detectada", len(hallazgos) == 1,
-           f"luhn={luhn(pan)} iin='{iin_marca(pan)}'")
+    for name, pan in TEST_CARDS:
+        findings = find_pans(pan, "t")
+        ck(f"{name} detectada", len(findings) == 1,
+           f"luhn={luhn(pan)} iin='{iin_brand(pan)}'")
 
 
-def prueba_formatos():
+def test_formats():
     print("\n[2] en frase, agrupado y con separadores")
-    casos = [
+    cases = [
         ("en frase",         "mi tarjeta es 4111111111111111 gracias"),
         ("4-4-4-4 espacios", "4111 1111 1111 1111"),
         ("4-4-4-4 guiones",  "4111-1111-1111-1111"),
         ("amex 4-6-5",       "3782 822463 10005"),
         ("separadores mixtos", "4111 1111-1111 1111"),
     ]
-    for nombre, texto in casos:
-        ck(nombre, len(find_pans(texto, "t")) >= 1, texto)
+    for name, text in cases:
+        ck(name, len(find_pans(text, "t")) >= 1, text)
 
 
-def prueba_falsos_positivos():
+def test_false_positives():
     print("\n[3] lo que NO debe disparar")
-    casos = [
+    cases = [
         ("16 digitos sin Luhn", "1234567890123456"),
         ("timestamp",           "20260825120000"),
         ("identificador largo", "9999999999999999"),
@@ -82,84 +82,84 @@ def prueba_falsos_positivos():
         ("hash sha256",         "a" * 64),
         ("token opaco",         "eyJhbGciOiJIUzI1NiJ9abcdefghijklmnop"),
     ]
-    for nombre, texto in casos:
+    for name, text in cases:
         # Con escanear_texto, no con find_pans: el UUID no disparaba la capa 3
         # pero si la 5, porque encaja con el alfabeto base64url. Probar solo
         # una capa dejaba pasar el falso positivo.
-        hallazgos = escanear_texto(texto, "t")
-        ck(nombre, len(hallazgos) == 0,
-           [(h.capa, h.tipo, h.detalle) for h in hallazgos])
+        findings = scan_text(text, "t")
+        ck(name, len(findings) == 0,
+           [(h.layer, h.type, h.detail) for h in findings])
 
 
-def prueba_evasiones():
+def test_evasions():
     print("\n[4] evasiones de codificacion que neutraliza la capa 0")
-    casos = [
+    cases = [
         ("fullwidth",      "４１１１１１１１１１１１１１１１"),
         ("zero-width",     "4111​1111​1111​1111"),
         ("soft hyphen",    "4111­1111­1111­1111"),
         ("guion Unicode",  "4111‑1111‑1111‑1111"),
         ("espacio duro",   "4111 1111 1111 1111"),
     ]
-    for nombre, texto in casos:
-        ck(nombre, len(find_pans(normalize(texto), "t")) >= 1,
-           repr(normalize(texto))[:60])
+    for name, text in cases:
+        ck(name, len(find_pans(normalize(text), "t")) >= 1,
+           repr(normalize(text))[:60])
 
 
-def prueba_sad():
+def test_sad():
     print("\n[5] SAD: siempre bloqueo duro")
-    casos = [
+    cases = [
         ("track1",      "%B4111111111111111^DOE/JOHN^25121011000000000000?"),
         ("track2",      ";4111111111111111=25121011000000000?"),
         ("cvv",         "el cvv es 123"),
         ("cvv2",        "CVV2: 4567"),
         ("pin",         "mi pin es 4321"),
     ]
-    for nombre, texto in casos:
-        hallazgos = [h for h in escanear_texto(texto, "t") if h.capa == 4]
-        ck(nombre, len(hallazgos) >= 1 and all(h.duro for h in hallazgos),
-           [h.detalle for h in hallazgos])
+    for name, text in cases:
+        findings = [h for h in scan_text(text, "t") if h.layer == 4]
+        ck(name, len(findings) >= 1 and all(h.hard for h in findings),
+           [h.detail for h in findings])
 
     print("\n[6] SAD: sin contexto no hay hallazgo")
-    for nombre, texto in [("pin sin numero", "necesito el pin del router"),
+    for name, text in [("pin sin numero", "necesito el pin del router"),
                           ("numero sin contexto", "el total son 123 euros")]:
-        hallazgos = [h for h in escanear_texto(texto, "t") if h.capa == 4]
-        ck(nombre, len(hallazgos) == 0, [h.detalle for h in hallazgos])
+        findings = [h for h in scan_text(text, "t") if h.layer == 4]
+        ck(name, len(findings) == 0, [h.detail for h in findings])
 
 
-def prueba_base64_y_binario():
+def test_base64_and_binary():
     print("\n[7] base64 y binario embebido")
     oculto = base64.b64encode(b"tarjeta 4111111111111111 fin").decode()
-    hallazgos = escanear_texto(f"adjunto: {oculto}", "t")
-    ck("PAN escondido en base64", any(h.tipo == "pan" for h in hallazgos),
-       [h.como_dict() for h in hallazgos])
+    findings = scan_text(f"adjunto: {oculto}", "t")
+    ck("PAN escondido en base64", any(h.type == "pan" for h in findings),
+       [h.as_dict() for h in findings])
 
     png = base64.b64encode(b"\x89PNG\r\n\x1a\n" + b"x" * 200).decode()
-    hallazgos = escanear_texto(f"img: {png}", "t")
-    ck("PNG en base64", any(h.tipo == "binario" for h in hallazgos),
-       [h.detalle for h in hallazgos])
+    findings = scan_text(f"img: {png}", "t")
+    ck("PNG en base64", any(h.type == "binary" for h in findings),
+       [h.detail for h in findings])
 
-    ck("data: URI", any(h.tipo == "binario" for h in
-                        escanear_texto("data:image/png;base64,iVBORw0KGgo=", "t")))
+    ck("data: URI", any(h.type == "binary" for h in
+                        scan_text("data:image/png;base64,iVBORw0KGgo=", "t")))
 
 
-def prueba_hallazgo_sin_valor():
+def test_finding_carries_no_value():
     print("\n[8] el hallazgo nunca transporta el valor")
-    hallazgos = escanear_texto("tarjeta 4111111111111111", "t")
+    findings = scan_text("tarjeta 4111111111111111", "t")
     ck("ningun hallazgo contiene el PAN",
-       not any("4111111111111111" in str(h.como_dict()) for h in hallazgos),
-       [h.como_dict() for h in hallazgos])
+       not any("4111111111111111" in str(h.as_dict()) for h in findings),
+       [h.as_dict() for h in findings])
 
 
 def main():
-    prueba_tarjetas_conocidas()
-    prueba_formatos()
-    prueba_falsos_positivos()
-    prueba_evasiones()
-    prueba_sad()
-    prueba_base64_y_binario()
-    prueba_hallazgo_sin_valor()
-    print("\n" + ("TODO OK" if not FALLOS else f"{len(FALLOS)} FALLOS: {FALLOS}"))
-    return 1 if FALLOS else 0
+    test_known_cards()
+    test_formats()
+    test_false_positives()
+    test_evasions()
+    test_sad()
+    test_base64_and_binary()
+    test_finding_carries_no_value()
+    print("\n" + ("TODO OK" if not FAILURES else f"{len(FAILURES)} FALLOS: {FAILURES}"))
+    return 1 if FAILURES else 0
 
 
 if __name__ == "__main__":

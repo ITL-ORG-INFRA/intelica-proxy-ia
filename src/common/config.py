@@ -66,14 +66,14 @@ INFLIGHT_LIMIT = _int("INFLIGHT_LIMIT", 200_000)
 
 #: cuantos lotes se envian como maximo en un tick. Subir de golpe dispara 429
 #: aunque el RPM medio este muy por debajo: la rampa tiene que ser gradual.
-SUBMIT_MAX_POR_TICK = _int("SUBMIT_MAX_POR_TICK", 2)
+SUBMIT_MAX_PER_TICK = _int("SUBMIT_MAX_PER_TICK", 2)
 
 #: cuantos lotes terminados se bajan por tick (cada uno puede ser enorme)
-FETCH_MAX_POR_TICK = _int("FETCH_MAX_POR_TICK", 2)
+FETCH_MAX_PER_TICK = _int("FETCH_MAX_PER_TICK", 2)
 
 # --- polling ---------------------------------------------------------------
 BATCH_EXPIRY_HOURS = _int("BATCH_EXPIRY_HOURS", 24)
 RESULTS_TTL_DAYS = _int("RESULTS_TTL_DAYS", 30)
 
-#: prefijo de los lotes que planta el canario. Nunca deben cruzar a clean.
-CANARY_PREFIX = _env("CANARY_PREFIX", "canario/")
+#: prefijo de los lotes que planta el canary. Nunca deben cruzar a clean.
+CANARY_PREFIX = _env("CANARY_PREFIX", "canary/")

@@ -34,7 +34,7 @@ LLAMANTE="$("${AWS[@]}" sts get-caller-identity)" || die "credenciales AWS inval
 CUENTA="$(jq -r .Account <<<"$LLAMANTE")"
 
 P="${PROYECTO}-${ENTORNO}"
-FUNCIONES=(sanitizer verificador submitter reconciliador fetcher canario)
+FUNCIONES=(sanitizer verifier submitter reconciler fetcher canary)
 
 paso "Destino"
 info "cuenta ${CUENTA} · region ${REGION} · entorno ${ENTORNO}"

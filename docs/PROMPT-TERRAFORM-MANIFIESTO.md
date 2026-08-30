@@ -18,12 +18,12 @@ cierran con un fichero `_MANIFEST.json` que se sube **al final**. Ese manifiesto
 es la señal de "ya está todo", y es lo que debe disparar el envío.
 
 ```
-raw/entrada/lote-2026-08-27/parte-01.json  ─┐
-raw/entrada/lote-2026-08-27/parte-02.json  ─┼─► sanitizer (uno por fichero)
-raw/entrada/lote-2026-08-27/parte-03.json  ─┘        │
+raw/input/lote-2026-08-27/parte-01.json  ─┐
+raw/input/lote-2026-08-27/parte-02.json  ─┼─► sanitizer (uno por fichero)
+raw/input/lote-2026-08-27/parte-03.json  ─┘        │
                                                      └─► clean/ o quarantine/
 
-raw/entrada/lote-2026-08-27/_MANIFEST.json ─────────────► submitter
+raw/input/lote-2026-08-27/_MANIFEST.json ─────────────► submitter
                                                             ¿están todas las
                                                             partes sanitizadas?
                                                             sí → POST a Anthropic
@@ -153,8 +153,8 @@ No hace falta:
 
 - **SQS.** Se valoró y se descartó: la espera la resuelve el barrido por horario,
   que ya existe. Una cola añadiría una pieza para un problema que ya está cubierto.
-- Cambios en DynamoDB. La tabla actual sirve: los nuevos items (`lote#...` y
-  `parte#...`) usan la misma clave de partición y el mismo GSI `status-index`.
+- Cambios en DynamoDB. La tabla actual sirve: los nuevos items (`batch#...` y
+  `part#...`) usan la misma clave de partición y el mismo GSI `status-index`.
 - Cambios en los buckets, las claves KMS, las alarmas ni el resto de Lambdas.
 
 ## Cómo comprobar que quedó bien
@@ -172,13 +172,13 @@ Debe devolver `false` para el patrón de datos con un evento de `_MANIFEST.json`
 Y después de aplicar, con un lote de prueba real:
 
 ```bash
-aws s3 cp parte-01.json     s3://<bucket-raw>/entrada/lote-prueba/parte-01.json
-aws s3 cp _MANIFEST.json    s3://<bucket-raw>/entrada/lote-prueba/_MANIFEST.json
+aws s3 cp parte-01.json     s3://<bucket-raw>/input/lote-prueba/parte-01.json
+aws s3 cp _MANIFEST.json    s3://<bucket-raw>/input/lote-prueba/_MANIFEST.json
 ```
 
 ```bash
 aws dynamodb get-item --table-name <tabla> \
-  --key '{"batch_id":{"S":"lote#entrada/lote-prueba"}}' --region eu-south-2
+  --key '{"batch_id":{"S":"batch#input/lote-prueba"}}' --region eu-south-2
 ```
 
 El item debe existir con `status = enviado` y un `batch_ids` no vacío. Si dice

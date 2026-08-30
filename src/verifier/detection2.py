@@ -3,7 +3,7 @@
 El sanitizer busca con expresiones regulares: tiradas de 13-19 digitos o
 grupos 4-4-4-4, y sobre lo que encuentra aplica Luhn e IIN. Si esta funcion
 hiciera lo mismo, no verificaria nada: fallaria exactamente en los mismos
-casos que el sanitizer y su "no encontre nada" no seria evidencia de nada.
+cases que el sanitizer y su "no encontre nada" no seria evidencia de nada.
 
 Asi que aqui no hay regex. Se extraen TODOS los digitos del texto, se tiran
 los separadores sean los que sean, y se desliza una ventana de 13 a 19 sobre
@@ -21,29 +21,29 @@ from typing import Dict, List, Tuple
 #: se comparte a proposito solo la tabla de marcas y el checksum: son hechos
 #: del dominio (ISO/IEC 7812), no decisiones de implementacion. Lo que no se
 #: comparte es COMO se localizan los candidatos, que es donde estan los fallos.
-from detectors import iin_marca, luhn
+from detectors import iin_brand, luhn
 
 MIN_PAN, MAX_PAN = 13, 19
 
 #: mas alla de esto el texto no es una frase con un numero, es un volcado
-MAX_DIGITOS = 200_000
+MAX_DIGITS = 200_000
 
 
-def _flujo_de_digitos(texto: str) -> Tuple[str, List[int]]:
+def _digit_stream(text: str) -> Tuple[str, List[int]]:
     """Devuelve todos los digitos seguidos y donde estaba cada uno."""
-    digitos: List[str] = []
+    digits: List[str] = []
     posiciones: List[int] = []
-    for indice, caracter in enumerate(texto):
+    for index, caracter in enumerate(text):
         if caracter.isdigit():
             # isdigit() acepta digitos no ASCII; se traducen a su valor.
-            digitos.append(str(int(caracter)) if caracter.isascii() else _valor(caracter))
-            posiciones.append(indice)
-            if len(digitos) >= MAX_DIGITOS:
+            digits.append(str(int(caracter)) if caracter.isascii() else _value(caracter))
+            posiciones.append(index)
+            if len(digits) >= MAX_DIGITS:
                 break
-    return "".join(digitos), posiciones
+    return "".join(digits), posiciones
 
 
-def _valor(caracter: str) -> str:
+def _value(caracter: str) -> str:
     import unicodedata
     try:
         return str(unicodedata.digit(caracter))
@@ -51,17 +51,17 @@ def _valor(caracter: str) -> str:
         return "0"
 
 
-def buscar_panes(texto: str) -> List[Dict[str, object]]:
+def pans_in_stream(text: str) -> List[Dict[str, object]]:
     """Ventana deslizante sobre el flujo de digitos. Sin regex."""
-    if not texto:
+    if not text:
         return []
 
-    flujo, posiciones = _flujo_de_digitos(texto)
+    flujo, posiciones = _digit_stream(text)
     if len(flujo) < MIN_PAN:
         return []
 
     encontrados: List[Dict[str, object]] = []
-    marcados = set()
+    marked = set()
 
     inicio = 0
     while inicio <= len(flujo) - MIN_PAN:
@@ -71,17 +71,17 @@ def buscar_panes(texto: str) -> List[Dict[str, object]]:
             candidato = flujo[inicio:inicio + longitud]
             if not luhn(candidato):
                 continue
-            marca = iin_marca(candidato)
-            if not marca:
+            brand = iin_brand(candidato)
+            if not brand:
                 continue
-            if any(inicio < fin and ini < inicio + longitud for ini, fin in marcados):
+            if any(inicio < fin and ini < inicio + longitud for ini, fin in marked):
                 continue
-            marcados.add((inicio, inicio + longitud))
+            marked.add((inicio, inicio + longitud))
             encontrados.append({
-                "marca": marca,
+                "brand": brand,
                 "longitud": longitud,
                 # posicion en el TEXTO, no el valor
-                "posicion_texto": posiciones[inicio],
+                "text_position": posiciones[inicio],
                 "separado": posiciones[inicio + longitud - 1] - posiciones[inicio] + 1 != longitud,
             })
             inicio += longitud - 1
@@ -91,11 +91,11 @@ def buscar_panes(texto: str) -> List[Dict[str, object]]:
     return encontrados
 
 
-def hay_digitos_sospechosos(texto: str) -> bool:
+def has_suspicious_digits(text: str) -> bool:
     """Senal barata y grosera: una tirada larga de digitos en datos ya limpios
     es rara de por si, aunque no valide Luhn."""
     seguidos = 0
-    for caracter in texto:
+    for caracter in text:
         if caracter.isdigit():
             seguidos += 1
             if seguidos >= MAX_PAN + 1:

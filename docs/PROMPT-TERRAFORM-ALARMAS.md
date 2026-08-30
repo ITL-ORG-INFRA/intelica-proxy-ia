@@ -3,6 +3,12 @@
 > Copia todo lo que hay debajo de la línea y pásaselo a tu agente en el repo de
 > Terraform.
 
+> **Los nombres de métrica de este documento están obsoletos.** El repo pasó a
+> nomenclatura inglesa: `BloqueoDuro` es hoy `HardBlock`, `LotesEnCuarentena` es
+> `BatchesQuarantined`, y así con todas. La tabla de equivalencias y el resto del
+> cambio están en `PROMPT-TERRAFORM-RENOMBRADO.md`. Los textos de runbook y los
+> prefijos de severidad de aquí abajo siguen siendo válidos.
+
 ---
 
 Necesito reescribir las alarmas de **`intelica-proxy-ia`**. Dos problemas:
@@ -154,7 +160,7 @@ error suelto: apunta a una fuente de datos mal configurada aguas arriba.
 Cada lote rechazado tiene un parte de estado que el propio productor puede
 leer, con la capa que disparo y que hacer:
 
-  aws s3 ls s3://intelica-proxy-ia-<ENTORNO>-clean-<CUENTA>/estado/
+  aws s3 ls s3://intelica-proxy-ia-<ENTORNO>-clean-<CUENTA>/status/
     --region eu-south-2
 
 Empieza por ahi antes de mirar el CDE: el parte suele bastar para saber a que

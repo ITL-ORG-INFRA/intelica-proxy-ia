@@ -15,7 +15,7 @@ Mastercard.
 ## El mapa
 
 ```
-raw/entrada/lote-2026-08-27/
+raw/input/lote-2026-08-27/
 ├── parte-01.json   ← el prompt va aquí, en cada request
 ├── parte-02.json   ← y aquí
 ├── parte-03.json   ← y aquí
@@ -175,7 +175,7 @@ se procesan en paralelo.
 
 ```bash
 LOTE=lote-2026-08-27
-RAW=s3://intelica-proxy-ia-dev-raw-891376942769/entrada/$LOTE
+RAW=s3://intelica-proxy-ia-dev-raw-891376942769/input/$LOTE
 ```
 
 ```bash
@@ -213,17 +213,17 @@ barrido lo recoge cuando terminen.
 A los pocos segundos de subir cada `.json`:
 
 ```bash
-aws s3 ls s3://intelica-proxy-ia-dev-clean-891376942769/estado/ --region eu-south-2
+aws s3 ls s3://intelica-proxy-ia-dev-clean-891376942769/status/ --region eu-south-2
 ```
 
 ```bash
-aws s3 cp s3://intelica-proxy-ia-dev-clean-891376942769/estado/<batch_id>.json - --region eu-south-2
+aws s3 cp s3://intelica-proxy-ia-dev-clean-891376942769/status/<batch_id>.json - --region eu-south-2
 ```
 
 ```json
 {
-  "estado": "limpio",
-  "peticiones": { "recibidas": 1570, "limpias": 1570, "rechazadas": 0 }
+  "status": "clean",
+  "request_counts": { "received": 1570, "clean": 1570, "rejected": 0 }
 }
 ```
 
@@ -232,15 +232,15 @@ hacer**, sin incluir nunca el valor que la disparó:
 
 ```json
 {
-  "estado": "cuarentena",
-  "motivo": "gate: 3/1570 rechazadas (0.19%) supera el umbral (1.0% o 100 absolutas)",
-  "rechazos": [
-    { "indice": 41,
-      "hallazgos": [{ "capa": 3, "tipo": "pan",
-                      "donde": "requests[41].params.messages[0].content",
-                      "detalle": "visa/16d/contiguo" }] }
+  "status": "quarantined",
+  "reason": "gate: 3/1570 rechazadas (0.19%) supera el umbral (1.0% o 100 absolutas)",
+  "rejections": [
+    { "index": 41,
+      "findings": [{ "layer": 3, "type": "pan",
+                      "where": "requests[41].params.messages[0].content",
+                      "detail": "visa/16d/contiguo" }] }
   ],
-  "que_hacer": ["Se detecto un numero de tarjeta en texto libre. Quitalo del origen: el proxy no lo enmascara, lo bloquea."]
+  "what_to_do": ["Se detecto un numero de tarjeta en texto libre. Quitalo del origen: el proxy no lo enmascara, lo bloquea."]
 }
 ```
 
@@ -248,7 +248,7 @@ hacer**, sin incluir nunca el valor que la disparó:
 
 ```bash
 aws dynamodb get-item --table-name intelica-proxy-ia-dev-batches \
-  --key '{"batch_id":{"S":"lote#entrada/lote-2026-08-27"}}' \
+  --key '{"batch_id":{"S":"batch#input/lote-2026-08-27"}}' \
   --region eu-south-2
 ```
 
@@ -348,7 +348,7 @@ Contra el entorno real, con las suites de ejemplo:
 ningún lado y se pierde media tarde ahí.
 
 **Subí una parte y no aparece parte de estado.** Comprueba que va bajo
-`entrada/<lote>/` y que el nombre no lleva caracteres raros. Luego:
+`input/<lote>/` y que el nombre no lleva caracteres raros. Luego:
 
 ```bash
 aws logs tail /aws/lambda/intelica-proxy-ia-dev-sanitizer --since 10m --region eu-south-2

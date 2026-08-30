@@ -28,7 +28,7 @@ Dejas un JSON en un bucket de S3. Al rato aparecen los resultados en otro bucket
       }
     }
   ],
-  "metadata": {"origen": "conciliacion-mensual"}
+  "metadata": {"source": "conciliacion-mensual"}
 }
 ```
 
@@ -45,7 +45,7 @@ Reglas que conviene saber antes, porque el proxy es **estricto a propósito**:
 ## 2. Subirlo
 
 ```bash
-aws s3 cp lote.json s3://intelica-proxy-ia-dev-raw-<cuenta>/entrada/lote.json --region eu-south-2
+aws s3 cp lote.json s3://intelica-proxy-ia-dev-raw-<cuenta>/input/lote.json --region eu-south-2
 ```
 
 Y ya está. No hay que llamar a ninguna API ni avisar a nadie: dejar el fichero
@@ -56,8 +56,8 @@ dispara todo el proceso.
 A los pocos segundos aparece un **parte de estado**:
 
 ```bash
-aws s3 ls s3://intelica-proxy-ia-dev-clean-<cuenta>/estado/ --region eu-south-2
-aws s3 cp s3://intelica-proxy-ia-dev-clean-<cuenta>/estado/<batch_id>.json - --region eu-south-2
+aws s3 ls s3://intelica-proxy-ia-dev-clean-<cuenta>/status/ --region eu-south-2
+aws s3 cp s3://intelica-proxy-ia-dev-clean-<cuenta>/status/<batch_id>.json - --region eu-south-2
 ```
 
 Si todo fue bien:
@@ -65,8 +65,8 @@ Si todo fue bien:
 ```json
 {
   "batch_id": "b_a1b2c3...",
-  "estado": "limpio",
-  "peticiones": {"recibidas": 500, "limpias": 500, "rechazadas": 0}
+  "status": "clean",
+  "request_counts": {"received": 500, "clean": 500, "rejected": 0}
 }
 ```
 
@@ -74,16 +74,16 @@ Si algo se bloqueó:
 
 ```json
 {
-  "estado": "cuarentena",
-  "peticiones": {"recibidas": 500, "limpias": 0, "rechazadas": 3},
-  "motivo": "gate: 3/500 rechazadas (0.60%) supera el umbral (1.0% o 100 absolutas)",
-  "rechazos": [
-    {"indice": 41, "motivo": "contenido",
-     "hallazgos": [{"capa": 3, "tipo": "pan",
-                    "donde": "requests[41].params.messages[0].content",
-                    "detalle": "visa/16d/contiguo"}]}
+  "status": "quarantined",
+  "request_counts": {"received": 500, "clean": 0, "rejected": 3},
+  "reason": "gate: 3/500 rechazadas (0.60%) supera el umbral (1.0% o 100 absolutas)",
+  "rejections": [
+    {"index": 41, "reason": "contenido",
+     "findings": [{"layer": 3, "type": "pan",
+                    "where": "requests[41].params.messages[0].content",
+                    "detail": "visa/16d/contiguo"}]}
   ],
-  "que_hacer": [
+  "what_to_do": [
     "Se detecto un numero de tarjeta en texto libre. Quitalo del origen: el proxy no lo enmascara, lo bloquea."
   ]
 }
@@ -166,7 +166,7 @@ Pídeselos a infraestructura. Son estos y sólo estos:
       "Sid": "DejarLotes",
       "Effect": "Allow",
       "Action": "s3:PutObject",
-      "Resource": "arn:aws:s3:::intelica-proxy-ia-dev-raw-<cuenta>/entrada/*"
+      "Resource": "arn:aws:s3:::intelica-proxy-ia-dev-raw-<cuenta>/input/*"
     },
     {
       "Sid": "CifrarAlSubir",
@@ -180,7 +180,7 @@ Pídeselos a infraestructura. Son estos y sólo estos:
       "Action": ["s3:GetObject", "s3:ListBucket"],
       "Resource": [
         "arn:aws:s3:::intelica-proxy-ia-dev-clean-<cuenta>",
-        "arn:aws:s3:::intelica-proxy-ia-dev-clean-<cuenta>/estado/*",
+        "arn:aws:s3:::intelica-proxy-ia-dev-clean-<cuenta>/status/*",
         "arn:aws:s3:::intelica-proxy-ia-dev-results-<cuenta>",
         "arn:aws:s3:::intelica-proxy-ia-dev-results-<cuenta>/*"
       ]
@@ -211,7 +211,7 @@ Dos cosas que **no** incluye, y no es un olvido:
 falta `kms:GenerateDataKey`. El error no menciona KMS por ninguna parte.
 
 **Subí el fichero y no aparece ningún parte de estado.** El nombre no puede
-llevar caracteres raros y tiene que ir bajo `entrada/`. Si persiste, avisa a
+llevar caracteres raros y tiene que ir bajo `input/`. Si persiste, avisa a
 infraestructura: puede que el disparador esté caído.
 
 **El parte dice `cuarentena` y no entiendo por qué.** Mira `rechazos[].hallazgos`

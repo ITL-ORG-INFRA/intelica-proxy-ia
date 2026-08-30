@@ -20,43 +20,43 @@ import sys
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(REPO, "src", "sanitizer"))
 
-from detectors import escanear_texto            # noqa: E402
-from envelope import EnvelopeInvalido, normalizar_peticion  # noqa: E402
+from detectors import scan_text            # noqa: E402
+from envelope import InvalidEnvelope, normalize_request  # noqa: E402
 
-FALLOS = []
-
-
-def ck(nombre, condicion, detalle=""):
-    print(("  OK   " if condicion else "  FALLA ") + nombre
-          + ("" if condicion else f"  <- {detalle}"))
-    if not condicion:
-        FALLOS.append(nombre)
+FAILURES = []
 
 
-def peticion(params_extra=None, texto="Extrae los eventos de facturacion."):
+def ck(name, condition, detail=""):
+    print(("  OK   " if condition else "  FALLA ") + name
+          + ("" if condition else f"  <- {detail}"))
+    if not condition:
+        FAILURES.append(name)
+
+
+def request(params_extra=None, text="Extrae los eventos de facturacion."):
     params = {"model": "claude-sonnet-4-5", "max_tokens": 1000,
-              "messages": [{"role": "user", "content": texto}]}
+              "messages": [{"role": "user", "content": text}]}
     params.update(params_extra or {})
     return {"custom_id": "ARG-2AB1006T-16b4a3b9", "params": params}
 
 
-def pasar(pet):
+def run_layers(pet):
     """Devuelve (salida, hallazgos) tras las capas 1 a 5. Propaga EnvelopeInvalido."""
-    salida, textos, hallazgos = normalizar_peticion(pet, 0, set(), 4096)
-    for ruta, texto in textos:
-        hallazgos.extend(escanear_texto(texto, ruta))
-    return salida, hallazgos
+    out, texts, findings = normalize_request(pet, 0, set(), 4096)
+    for path, text in texts:
+        findings.extend(scan_text(text, path))
+    return out, findings
 
 
-def rechaza_envelope(pet):
+def rejects_envelope(pet):
     try:
-        pasar(pet)
+        run_layers(pet)
         return False
-    except EnvelopeInvalido:
+    except InvalidEnvelope:
         return True
 
 
-def esquema(propiedades):
+def schema_of(propiedades):
     return {"output_config": {"format": {
         "type": "json_schema",
         "schema": {"type": "object", "properties": propiedades},
@@ -66,50 +66,50 @@ def esquema(propiedades):
 # ---------------------------------------------------------------------------
 print("\n[1] la forma real del trabajo cruza")
 
-salida, hallazgos = pasar(peticion({
+out, findings = run_layers(request({
     "system": [{"type": "text", "text": "Eres un extractor de guias de tarifas.",
                 "cache_control": {"type": "ephemeral"}}],
-    **esquema({"fee_code": {"type": "string"},
+    **schema_of({"fee_code": {"type": "string"},
                "amount": {"type": "string", "description": "el valor tal cual"}}),
 }))
-ck("una peticion con output_config y cache_control pasa", not hallazgos,
-   [h.como_dict() for h in hallazgos])
+ck("una peticion con output_config y cache_control pasa", not findings,
+   [h.as_dict() for h in findings])
 ck("el cache_control llega a la salida",
-   salida["params"]["system"][0].get("cache_control") == {"type": "ephemeral"},
+   out["params"]["system"][0].get("cache_control") == {"type": "ephemeral"},
    "sin el, un system de 4 KB se cobra en cada peticion en vez de una vez")
 ck("el output_config llega a la salida",
-   "fee_code" in salida["params"]["output_config"]["format"]["schema"]["properties"])
+   "fee_code" in out["params"]["output_config"]["format"]["schema"]["properties"])
 ck("ttl explicito admitido",
-   pasar(peticion({"system": [{"type": "text", "text": "x",
+   run_layers(request({"system": [{"type": "text", "text": "x",
                                "cache_control": {"type": "ephemeral", "ttl": "1h"}}]}))[1] == [])
 
 # ---------------------------------------------------------------------------
 print("\n[2] el esquema de salida no puede pedir datos prohibidos")
 
-for campo in ("cvv", "card_number", "pan", "cvc2", "track2"):
-    _, hallazgos = pasar(peticion(esquema({campo: {"type": "string"}})))
-    ck(f"un esquema que pide '{campo}' rechaza la peticion",
-       any(h.capa == 2 for h in hallazgos),
+for field in ("cvv", "card_number", "pan", "cvc2", "track2"):
+    _, findings = run_layers(request(schema_of({field: {"type": "string"}})))
+    ck(f"un esquema que pide '{field}' rechaza la peticion",
+       any(h.layer == 2 for h in findings),
        "el esquema es una instruccion al modelo, no metadata inerte")
 
-_, hallazgos = pasar(peticion(esquema({"fee_code": {"type": "string"}})))
-ck("un esquema legitimo no se rechaza", not hallazgos,
-   [h.como_dict() for h in hallazgos])
+_, findings = run_layers(request(schema_of({"fee_code": {"type": "string"}})))
+ck("un esquema legitimo no se rechaza", not findings,
+   [h.as_dict() for h in findings])
 
 # ---------------------------------------------------------------------------
 print("\n[3] el esquema entero se escanea: viaja a Anthropic")
 
 PAN = "4111111111111111"
 
-casos = [
+cases = [
     ("en una description",
-     esquema({"nota": {"type": "string", "description": f"por ejemplo {PAN}"}})),
+     schema_of({"nota": {"type": "string", "description": f"por ejemplo {PAN}"}})),
     # 'region' y no 'tarjeta': ese nombre ya lo tumbaria la capa 2 y el enum
     # ni se llegaria a mirar, con lo que la prueba no probaria nada.
     ("en un enum",
-     esquema({"region": {"type": "string", "enum": ["europe", PAN]}})),
+     schema_of({"region": {"type": "string", "enum": ["europe", PAN]}})),
     ("en el nombre de una propiedad",
-     esquema({f"campo_{PAN}": {"type": "string"}})),
+     schema_of({f"campo_{PAN}": {"type": "string"}})),
     ("en format.name",
      {"output_config": {"format": {"type": "json_schema", "name": f"n{PAN}",
                                    "schema": {"type": "object"}}}}),
@@ -118,41 +118,41 @@ casos = [
                                    "description": f"para {PAN}",
                                    "schema": {"type": "object"}}}}),
 ]
-for nombre, extra in casos:
-    _, hallazgos = pasar(peticion(extra))
-    ck(f"un PAN {nombre} se detecta",
-       any(h.capa == 3 for h in hallazgos))
+for name, extra in cases:
+    _, findings = run_layers(request(extra))
+    ck(f"un PAN {name} se detecta",
+       any(h.layer == 3 for h in findings))
 
-_, hallazgos = pasar(peticion(esquema(
+_, findings = run_layers(request(schema_of(
     {"nota": {"type": "string", "description": "banda: ;4111111111111111=25121010000000000000?"}})))
 ck("SAD en el esquema es bloqueo duro",
-   any(h.duro for h in hallazgos),
+   any(h.hard for h in findings),
    "los datos de autenticacion tumban el lote entero, esten donde esten")
 
 # ---------------------------------------------------------------------------
 print("\n[4] los huecos nuevos siguen siendo deny-by-default")
 
 ck("cache_control con clave desconocida se rechaza",
-   rechaza_envelope(peticion({"system": [{"type": "text", "text": "x",
+   rejects_envelope(request({"system": [{"type": "text", "text": "x",
        "cache_control": {"type": "ephemeral", "cvv": "123"}}]})))
 ck("cache_control con tipo desconocido se rechaza",
-   rechaza_envelope(peticion({"system": [{"type": "text", "text": "x",
+   rejects_envelope(request({"system": [{"type": "text", "text": "x",
        "cache_control": {"type": "persistent"}}]})))
 ck("cache_control con ttl invalido se rechaza",
-   rechaza_envelope(peticion({"system": [{"type": "text", "text": "x",
+   rejects_envelope(request({"system": [{"type": "text", "text": "x",
        "cache_control": {"type": "ephemeral", "ttl": "99y"}}]})))
 ck("output_config con clave desconocida se rechaza",
-   rechaza_envelope(peticion({"output_config": {"format": {"type": "text"},
+   rejects_envelope(request({"output_config": {"format": {"type": "text"},
                                                 "extra": 1}})))
 ck("format con clave desconocida se rechaza",
-   rechaza_envelope(peticion({"output_config": {"format": {"type": "text",
+   rejects_envelope(request({"output_config": {"format": {"type": "text",
                                                            "callback": "http://x"}}})))
 ck("un tipo de formato inventado se rechaza",
-   rechaza_envelope(peticion({"output_config": {"format": {"type": "xml"}}})))
+   rejects_envelope(request({"output_config": {"format": {"type": "xml"}}})))
 ck("json_schema sin schema se rechaza",
-   rechaza_envelope(peticion({"output_config": {"format": {"type": "json_schema"}}})))
+   rejects_envelope(request({"output_config": {"format": {"type": "json_schema"}}})))
 ck("un bloque de contenido con clave desconocida se rechaza",
-   rechaza_envelope(peticion({"messages": [{"role": "user", "content": [
+   rejects_envelope(request({"messages": [{"role": "user", "content": [
        {"type": "text", "text": "x", "source": {"data": "..."}}]}]})))
 
 # ---------------------------------------------------------------------------
@@ -164,17 +164,17 @@ for _ in range(40):
     cursor["items"] = {"type": "object"}
     cursor = cursor["items"]
 ck("un esquema demasiado anidado se rechaza",
-   rechaza_envelope(peticion({"output_config": {"format": {
+   rejects_envelope(request({"output_config": {"format": {
        "type": "json_schema", "schema": hondo}}})))
 
 ancho = {"type": "object", "properties": {f"c{i}": {"type": "string"}
                                           for i in range(3000)}}
 ck("un esquema con demasiados nodos se rechaza",
-   rechaza_envelope(peticion({"output_config": {"format": {
+   rejects_envelope(request({"output_config": {"format": {
        "type": "json_schema", "schema": ancho}}})))
 
 print()
-if FALLOS:
-    print(f"FALLAN {len(FALLOS)}: " + ", ".join(FALLOS))
+if FAILURES:
+    print(f"FALLAN {len(FAILURES)}: " + ", ".join(FAILURES))
     sys.exit(1)
 print("TODO OK")

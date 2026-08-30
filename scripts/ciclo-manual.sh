@@ -2,7 +2,7 @@
 # ---------------------------------------------------------------------------
 # Mueve el ciclo a mano cuando las reglas de horario estan desactivadas.
 #
-# El sanitizer y el verificador se disparan por eventos de S3, asi que siguen
+# El sanitizer y el verifier se disparan por eventos de S3, asi que siguen
 # funcionando solos. Los otros cuatro dependen de EventBridge por horario: si
 # esas reglas estan apagadas, un lote limpio se queda en 'verificado' para
 # siempre y da la impresion de que algo se rompio.
@@ -11,8 +11,8 @@
 # una. Util en dev mientras los horarios estan apagados, y para depurar sin
 # esperar al proximo tick.
 #
-#   ./scripts/ciclo-manual.sh dev              submitter, reconciliador, fetcher
-#   ./scripts/ciclo-manual.sh dev --con-canario  incluye el canario
+#   ./scripts/ciclo-manual.sh dev              submitter, reconciler, fetcher
+#   ./scripts/ciclo-manual.sh dev --con-canary  incluye el canary
 #   ./scripts/ciclo-manual.sh dev submitter      solo una
 # ---------------------------------------------------------------------------
 set -Eeuo pipefail
@@ -33,7 +33,7 @@ paso() { printf '\n%s==>%s %s%s%s\n' "$AZUL" "$R" "$B" "$*" "$R"; }
 dato() { printf '    %s·%s %s\n' "$D" "$R" "$*"; }
 die()  { printf '\n%serror:%s %s\n' "$ROJO" "$R" "$*" >&2; exit 1; }
 
-[[ "$ENTORNO" =~ ^(dev|qa)$ ]] || die "uso: $0 <dev|qa> [--con-canario|<lambda>]"
+[[ "$ENTORNO" =~ ^(dev|qa)$ ]] || die "uso: $0 <dev|qa> [--con-canary|<lambda>]"
 
 for bin in aws jq; do
   command -v "$bin" >/dev/null 2>&1 || die "falta '$bin'"
@@ -44,12 +44,12 @@ AWS=(aws --region "$REGION" --output json)
 
 P="${PROYECTO}-${ENTORNO}"
 
-# El orden importa: el submitter manda lo que el verificador aprobo, el
-# reconciliador marca lo que Anthropic termino, y el fetcher baja eso ultimo.
+# El orden importa: el submitter manda lo que el verifier aprobo, el
+# reconciler marca lo que Anthropic termino, y el fetcher baja eso ultimo.
 # Invocarlas al reves solo desperdicia un ciclo.
-SECUENCIA=(submitter reconciliador fetcher)
+SECUENCIA=(submitter reconciler fetcher)
 case "${1:-}" in
-  --con-canario) SECUENCIA=(canario submitter reconciliador fetcher) ;;
+  --con-canary) SECUENCIA=(canary submitter reconciler fetcher) ;;
   "") ;;
   *) SECUENCIA=("$1") ;;
 esac

@@ -74,7 +74,7 @@ paso "Destino"
 dato "cuenta ${CUENTA} · region ${REGION} · entorno ${ENTORNO}"
 dato "raw:   s3://${RAW}"
 dato "clean: s3://${CLEAN}"
-printf '\n    %sOJO:%s los ejemplos con SAD disparan la alarma BloqueoDuro.\n' "$AMBAR" "$R"
+printf '\n    %sOJO:%s los ejemplos con SAD disparan la alarma HardBlock.\n' "$AMBAR" "$R"
 printf '    Es correcto —el control funciona— pero avisa a quien reciba las alarmas.\n'
 
 # El sanitizer deriva el id de bucket/key/etag. Se replica aqui para saber
@@ -95,19 +95,19 @@ for fichero in "${FICHEROS[@]}"; do
   jq empty "$fichero" 2>/dev/null || { printf '\n  %s✗%s %s no es JSON valido\n' "$ROJO" "$R" "$nombre"; continue; }
 
   paso "$nombre"
-  caso="$(jq -r '.metadata.caso // ""' "$fichero")"
+  caso="$(jq -r '.metadata.case // ""' "$fichero")"
   [[ -n "$caso" ]] && dato "$caso"
 
   manifiesto="$(dirname "$fichero")/manifiesto.json"
   esperado=""
   if [[ -f "$manifiesto" ]]; then
     esperado="$(jq -r --arg f "$nombre" \
-      '.casos[] | select(.fichero == $f) | .esperado // ""' "$manifiesto" 2>/dev/null)"
+      '.cases[] | select(.fichero == $f) | .esperado // ""' "$manifiesto" 2>/dev/null)"
     [[ -n "$esperado" ]] && dato "esperado: ${esperado}"
   fi
   dato "peticiones: $(jq '.requests | length' "$fichero")"
 
-  clave="entrada/prueba-$(date +%Y%m%d-%H%M%S)-${nombre}"
+  clave="input/prueba-$(date +%Y%m%d-%H%M%S)-${nombre}"
   "${AWS[@]}" s3api put-object --bucket "$RAW" --key "$clave" \
     --body "$fichero" --content-type application/json >/dev/null
   etag="$("${AWS[@]}" s3api head-object --bucket "$RAW" --key "$clave" | jq -r .ETag | tr -d '"')"
@@ -120,7 +120,7 @@ for fichero in "${FICHEROS[@]}"; do
   for _ in $(seq 1 "$ESPERA_MAX"); do
     # 's3 cp -' escribe solo el cuerpo; 's3api get-object' mezclaria el
     # cuerpo con los metadatos de la respuesta en la misma salida.
-    if parte="$("${AWS[@]}" s3 cp "s3://${CLEAN}/estado/${lote}.json" - 2>/dev/null)"; then
+    if parte="$("${AWS[@]}" s3 cp "s3://${CLEAN}/status/${lote}.json" - 2>/dev/null)"; then
       [[ -n "$parte" ]] && break
     fi
     printf '.'
@@ -136,7 +136,7 @@ for fichero in "${FICHEROS[@]}"; do
     continue
   fi
 
-  estado="$(jq -r '.estado' <<<"$parte")"
+  estado="$(jq -r '.status' <<<"$parte")"
 
   if [[ -n "$esperado" && "$estado" != "$esperado" ]]; then
     printf '    %s✗ NO COINCIDE%s  obtenido=%s esperado=%s\n' \
@@ -149,15 +149,15 @@ for fichero in "${FICHEROS[@]}"; do
     limpios=$((limpios + 1))
   else
     printf '    %s✗ CUARENTENA%s  %s\n' "$ROJO" "$R" "$(jq -c '.peticiones' <<<"$parte")"
-    printf '      motivo: %s\n' "$(jq -r '.motivo' <<<"$parte")"
-    jq -r '.resumen_por_capa | to_entries[] | "      \(.key): \(.value)"' <<<"$parte" 2>/dev/null || true
-    jq -r '.rechazos[]? | "      requests[\(.indice)] " +
+    printf '      motivo: %s\n' "$(jq -r '.reason' <<<"$parte")"
+    jq -r '.summary_by_layer | to_entries[] | "      \(.key): \(.value)"' <<<"$parte" 2>/dev/null || true
+    jq -r '.rejections[]? | "      requests[\(.indice)] " +
              (if .hallazgos then (.hallazgos[] | "capa \(.capa) \(.tipo) — \(.detalle) en \(.donde)")
               else .detalle end)' <<<"$parte" 2>/dev/null | head -6 || true
-    jq -r '.que_hacer[]? | "      → \(.)"' <<<"$parte" 2>/dev/null || true
+    jq -r '.what_to_do[]? | "      → \(.)"' <<<"$parte" 2>/dev/null || true
     cuarentena=$((cuarentena + 1))
   fi
-  dato "parte completo: aws s3 cp s3://${CLEAN}/estado/${lote}.json - --region ${REGION}"
+  dato "parte completo: aws s3 cp s3://${CLEAN}/status/${lote}.json - --region ${REGION}"
 done
 
 paso "Resumen"
@@ -182,6 +182,6 @@ cat <<AYUDA
         aws dynamodb scan --table-name ${P}-batches \\
           --projection-expression "batch_id,#s,motivo" \\
           --expression-attribute-names '{"#s":"status"}' \\
-          --region ${REGION} | jq -r '.Items[] | [.batch_id.S, .status.S, (.motivo.S // "")] | @tsv'
+          --region ${REGION} | jq -r '.Items[] | [.batch_id.S, .status.S, (.reason.S // "")] | @tsv'
 
 AYUDA

@@ -1,6 +1,6 @@
 # Sobre los números de tarjeta que hay en este repo
 
-Hay números que parecen tarjetas en `tests/`, en `src/canario/casos.py` y en este
+Hay números que parecen tarjetas en `tests/`, en `src/canary/cases.py` y en este
 documento. **No son datos de tarjeta.** Esta página existe para que quien los
 encuentre —una persona nueva, un escáner automático o un auditor— tenga la
 respuesta sin tener que preguntar.
@@ -41,9 +41,9 @@ no borrarlos.
 
 Ficheros afectados:
 
-- `src/canario/casos.py` — los siete señuelos que planta el canario
+- `src/canary/cases.py` — los siete señuelos que planta el canario
 - `tests/detectores_test.py` — catorce tarjetas, una por marca y longitud
-- `tests/deteccion2_test.py` — las mismas, para comparar las dos implementaciones
+- `tests/detection2_test.py` — las mismas, para comparar las dos implementaciones
 - `tests/e2e_test.py` — un lote con un PAN, para comprobar que el gate aborta
 
 ## Cómo comprobar que sigue sin haber nada real

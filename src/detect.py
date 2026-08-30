@@ -85,8 +85,8 @@ def iin_ok(digits: str) -> bool:
     evita los falsos positivos en tablas financieras, que es el riesgo real de
     este corpus.
     """
-    for prefijos, rangos in _IIN:
-        if any(digits.startswith(p) for p in prefijos):
+    for prefixes, rangos in _IIN:
+        if any(digits.startswith(p) for p in prefixes):
             return True
         for desde, hasta, n in rangos:
             if len(digits) >= n and desde <= int(digits[:n]) <= hasta:
@@ -141,12 +141,12 @@ def scan_text(text: str) -> List[str]:
     """Capas 3 y 4 sobre un texto ya normalizado, con dedup por hash."""
     if not text:
         return []
-    clave = hashlib.blake2b(text.encode("utf-8"), digest_size=16).digest()
-    cacheado = _CACHE.get(clave)
+    key_ = hashlib.blake2b(text.encode("utf-8"), digest_size=16).digest()
+    cacheado = _CACHE.get(key_)
     if cacheado is not None:
         return list(cacheado)
     reglas = find_pan(text) + find_sad(text)
-    _CACHE[clave] = reglas
+    _CACHE[key_] = reglas
     return list(reglas)
 
 

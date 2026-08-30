@@ -145,14 +145,14 @@ cat <<SEGUIR
     Estado del lote:
 
       aws dynamodb get-item --table-name ${TABLA} \\
-        --key '{"batch_id":{"S":"lote#${DESTINO}"}}' --region ${REGION} \\
-        | jq '.Item | {status:.status.S, limpias:.partes_limpias.N,
-                       esperadas:.partes_esperadas.N,
-                       batch_ids:[.batch_ids.L[]?.S], motivo:.motivo.S}'
+        --key '{"batch_id":{"S":"batch#${DESTINO}"}}' --region ${REGION} \\
+        | jq '.Item | {status:.status.S, limpias:.clean_parts.N,
+                       esperadas:.expected_parts.N,
+                       batch_ids:[.batch_ids.L[]?.S], motivo:.reason.S}'
 
     Parte de estado de cada fichero:
 
-      aws s3 ls s3://${CLEAN}/estado/ --region ${REGION}
+      aws s3 ls s3://${CLEAN}/status/ --region ${REGION}
 
     ${D}enviado = ya esta en Anthropic · esperando_partes = el sanitizer sigue
     cuarentena = alguna parte fue rechazada, no se envio ninguna${R}

@@ -117,7 +117,7 @@ Si el verificador buscara igual que el sanitizer, fallaría en los mismos casos 
 - **Verificador**: sin regex. Extrae *todos* los dígitos, tira los separadores sean
   cuales sean, y desliza una ventana de 13 a 19 comprobando Luhn e IIN en cada posición.
 
-La prueba `tests/deteccion2_test.py` verifica que esto sirve de algo: hay seis
+La prueba `tests/detection2_test.py` verifica que esto sirve de algo: hay seis
 formas de escribir un PAN (`4111.1111.1111.1111`, separado por `/`, por `_`, por
 saltos de línea, disperso entre palabras) **ante las que el regex es ciego y la
 ventana no**. Encontrar algo aquí no es un productor malo: es un fallo del
@@ -250,7 +250,7 @@ python3 -m venv .venv && .venv/bin/pip install -r layer/requirements.txt boto3 &
 | Fichero | Qué cubre |
 |---|---|
 | `tests/detectores_test.py` | 14 PANes de prueba de todas las marcas, 5 evasiones de codificación, SAD, base64, falsos positivos |
-| `tests/deteccion2_test.py` | Que las dos implementaciones **no** fallen en los mismos sitios |
+| `tests/detection2_test.py` | Que las dos implementaciones **no** fallen en los mismos sitios |
 | `tests/e2e_test.py` | Pipeline completo sobre S3 y DynamoDB en memoria, incluido el contador atómico de la admisión |
 
 ## Estructura
@@ -258,11 +258,11 @@ python3 -m venv .venv && .venv/bin/pip install -r layer/requirements.txt boto3 &
 ```
 src/common/               config, logs (sin payload), store, cliente Anthropic
 src/sanitizer/            normalize · envelope · detectors · handler (gate)
-src/verificador/          deteccion2 (ventana deslizante) · handler
+src/verifier/          deteccion2 (ventana deslizante) · handler
 src/submitter/            admisión + POST
-src/reconciliador/        polling adaptativo, 1 llamada por tick
+src/reconciler/        polling adaptativo, 1 llamada por tick
 src/fetcher/              stream JSONL + 2º pase de sanitización
-src/canario/              prueba de control horaria
+src/canary/              prueba de control horaria
 layer/requirements.txt    dependencias del layer
 scripts/                  build · publish · verify
 tests/                    las tres suites y los dobles de AWS

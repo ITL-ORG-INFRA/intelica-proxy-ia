@@ -75,7 +75,7 @@ se invierte, el supervisor puede leer la tabla antes de que el lote esté.
 Si el encolado falla, **no** hacer fallar el envío: el lote ya está en Anthropic.
 Registrarlo y dejar que el barrido horario lo recoja.
 
-### `src/reconciliador/handler.py` → pasa a ser el supervisor
+### `src/reconciler/handler.py` → pasa a ser el supervisor
 
 Cambia de *«barro la tabla buscando lotes en vuelo»* a *«me dan un `batch_id`,
 pregunto por ése»*.
