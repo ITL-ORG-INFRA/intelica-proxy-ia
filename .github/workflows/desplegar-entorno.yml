@@ -37,10 +37,10 @@ jobs:
     # este fichero.
     environment: ${{ inputs.entorno }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Recuperar el artefacto construido
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: dist
           path: dist
@@ -113,7 +113,7 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ steps.rol.outputs.arn }}
           aws-region: ${{ inputs.region }}
