@@ -172,6 +172,23 @@ MANIFIESTO="$(jq -nc \
 paso "Manifiesto"
 jq . <<<"$MANIFIESTO" | sed 's/^/    /'
 
+# --- a donde va cada cosa --------------------------------------------------
+# Los nombres son construccion de cadenas y no necesitan credenciales, asi que
+# se calculan aqui: el ensayo en seco tiene que poder enseñar los destinos.
+# Son DOS buckets distintos, y es lo primero que hay que poder comprobar sin
+# subir nada.
+RAW="$(itl_bucket "$ENTORNO" raw)"
+CLEAN="$(itl_bucket "$ENTORNO" clean)"
+TABLA="$(itl_table "$ENTORNO")"
+DESTINO="${PREFIJO}/${NOMBRE}"
+MANIFEST_KEY="${DESTINO}/${ITL_MANIFEST_SUFFIX}"
+
+paso "Destino"
+printf '    %s%-11s%s s3://%s/%s/\n' "$B" "partes" "$R" "$RAW" "$DESTINO"
+printf '    %s%-11s%s s3://%s/%s\n' "$B" "manifiesto" "$R" "$CLEAN" "$MANIFEST_KEY"
+printf '    %sla carpeta del lote es la misma en los dos buckets, y es lo que\n' "$D"
+printf '    permite al submitter emparejarlos sin leer raw: %s%s\n' "$DESTINO" "$R"
+
 if $SOLO_MANIFIESTO; then
   printf '\n    %s--solo-manifiesto: no se ha subido nada%s\n\n' "$AMBAR" "$R"
   exit 0
@@ -179,15 +196,11 @@ fi
 
 # --- subir -----------------------------------------------------------------
 AWS=(aws --region "$REGION" --output json)
-# Los nombres de bucket ya no llevan el id de cuenta, pero la llamada se queda:
-# es la forma barata de fallar aqui si las credenciales caducaron, en vez de a
-# mitad de subida con medio lote arriba.
+# La llamada de identidad se queda aunque los nombres ya no lleven el id de
+# cuenta: es la forma barata de fallar aqui si las credenciales caducaron, en
+# vez de a mitad de subida con medio lote arriba.
 "${AWS[@]}" sts get-caller-identity >/dev/null \
   || die "credenciales AWS invalidas o expiradas"
-RAW="$(itl_bucket "$ENTORNO" raw)"
-CLEAN="$(itl_bucket "$ENTORNO" clean)"
-TABLA="$(itl_table "$ENTORNO")"
-DESTINO="${PREFIJO}/${NOMBRE}"
 
 paso "Subiendo las partes a s3://${RAW}/${DESTINO}/"
 
@@ -206,7 +219,6 @@ done
 # es lo que permite al submitter emparejar el manifiesto con sus partes sin
 # tener que leer raw.
 paso "Subiendo el manifiesto a s3://${CLEAN}/${DESTINO}/"
-MANIFEST_KEY="${DESTINO}/${ITL_MANIFEST_SUFFIX}"
 echo "$MANIFIESTO" | "${AWS[@]}" s3api put-object --bucket "$CLEAN" \
   --key "$MANIFEST_KEY" --body /dev/stdin \
   --content-type application/json >/dev/null
