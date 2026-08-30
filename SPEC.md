@@ -97,10 +97,10 @@ silenciosas a las 24 h**.
 - **Amazon Macie.** Descartado deliberadamente: dispara *después* del POST (el dato ya
   salió), usa el mismo algoritmo (Luhn+IIN) así que sus fallos están correlacionados
   con los del sanitizador, y "no encontró nada" no es evidencia falsable. Lo sustituye
-  el canario (§7), que produce evidencia **positiva**.
+  el canary (§7), que produce evidencia **positiva**.
 - **Gate de admisión** (contador de cola en vuelo). Solo muerde a volumen. La tabla
   DynamoDB debe soportarlo (`n_requests` por batch) pero no se implementa la lógica.
-- **Reconciliador / poller / fetcher de resultados.** Siguiente entrega. La tabla y el
+- **Reconciler / poller / fetcher de resultados.** Siguiente entrega. La tabla y el
   esquema deben dejarlo encajar sin migración.
 - **Decodificación base64/urlencode anidada** en el detector.
 
@@ -235,7 +235,7 @@ def validate_stream(lines: Iterable[str], pol: Policy) -> tuple[Verdict, list[st
     """Devuelve (veredicto, líneas_limpias, líneas_rechazadas)."""
 ```
 
-`validate_line` es el átomo: es lo que testean los fixtures, lo que invoca el canario y
+`validate_line` es el átomo: es lo que testean los fixtures, lo que invoca el canary y
 lo que un futuro worker de Distributed Map llamaría sin cambios. **Debe ser puro.**
 
 ---
@@ -338,7 +338,7 @@ suena "posible dato de tarjeta" y se quema la credibilidad del control.
 `policy.max_findings = 0`: **cualquier** hallazgo aborta el lote completo. Las líneas
 rechazadas van a `quarantine/`, el lote no se envía, y salta la alarma correspondiente.
 
-### El canario (prueba de control)
+### El canary (prueba de control)
 
 Lambda con schedule 1×/h que invoca `validate_line` **directamente** (no por el
 pipeline, para que un PAN de prueba no pueda acabar en un batch real) con los fixtures
@@ -487,7 +487,7 @@ existen en Anthropic y no en la tabla). Por eso el diseño usa `list` y no solo
 ## 10. Tests
 
 Los fixtures **ya están generados** en `tests/fixtures/` y derivan del archivo real de
-producción. El canario los reutiliza: la suite y la prueba en producción comparten
+producción. El canary los reutiliza: la suite y la prueba en producción comparten
 fixtures a propósito.
 
 | Fixture | Debe producir |
@@ -526,7 +526,7 @@ subcadena de 6+ dígitos consecutivos.** Es la verificación automática de la i
    tope de cola encolada: 200k / 300k / 500k, y con él cuántos batches caben a la vez.
 2. **Estado de GuardDuty Lambda Protection** (comando en §8).
 3. **Origen de los PDFs** que alimentan `{document_text}`. Si son solo publicaciones de
-   Mastercard, el sanitizador es un tripwire puro y el canario será lo único que
+   Mastercard, el sanitizador es un tripwire puro y el canary será lo único que
    dispare nunca — que es el resultado correcto. Si el mismo pipeline procesa también
    ficheros de clearing, extractos o expedientes de disputa, hay que reconsiderar el
    modo `redact` y reactivar el gate de admisión.

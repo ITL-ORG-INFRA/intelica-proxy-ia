@@ -9,14 +9,20 @@
 #
 # Solo lee. No modifica nada.
 #
-#   ./scripts/diagnostico-oidc.sh                     revisa los roles *-rol-ci
+#   ./scripts/diagnostico-oidc.sh                     revisa los roles *-role-ci-*
 #   ./scripts/diagnostico-oidc.sh <nombre-del-rol>    revisa uno concreto
 # ---------------------------------------------------------------------------
 set -Eeuo pipefail
 
+RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=scripts/lib/nombres.sh
+source "${RAIZ}/scripts/lib/nombres.sh"
+
 REGION="${AWS_REGION:-eu-south-2}"
-PROYECTO="${PROYECTO:-intelica-proxy-ia}"
 ROL_PEDIDO="${1:-}"
+
+#: los roles de CI de cualquier entorno: itl-0003-proxy-ia-<env>-role-ci-03
+PATRON_ROL_CI="${ITL_ORG}-${ITL_ASSET_ID}-${ITL_APP}-"
 
 if [[ -t 1 ]]; then
   R=$'\033[0m'; B=$'\033[1m'; D=$'\033[2m'
@@ -91,11 +97,12 @@ if [[ -n "$ROL_PEDIDO" ]]; then
   ROLES="$ROL_PEDIDO"
 else
   ROLES="$("${AWS[@]}" iam list-roles \
-    | jq -r --arg p "$PROYECTO" '.Roles[].RoleName | select(startswith($p) and endswith("rol-ci"))')"
+    | jq -r --arg p "$PATRON_ROL_CI" --arg s "-role-ci-${ITL_STACK}" \
+        '.Roles[].RoleName | select(startswith($p) and endswith($s))')"
 fi
 
 if [[ -z "$ROLES" ]]; then
-  avisa "no se encontro ningun rol ${PROYECTO}-*-rol-ci"
+  avisa "no se encontro ningun rol ${PATRON_ROL_CI}*-role-ci-${ITL_STACK}"
   dato "pasa el nombre como argumento: $0 <nombre-del-rol>"
   exit 1
 fi

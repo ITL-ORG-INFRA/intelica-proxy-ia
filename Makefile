@@ -7,7 +7,7 @@ PY := .venv/bin/python
 
 ayuda:
 	@echo "  make venv             crea el entorno virtual con las dependencias"
-	@echo "  make pruebas          corre las tres suites"
+	@echo "  make pruebas          corre todas las suites"
 	@echo "  make build            construye dist/ (artefactos reproducibles)"
 	@echo ""
 	@echo "  make publicar-dev     publica dist/ en dev"

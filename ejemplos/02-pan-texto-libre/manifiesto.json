@@ -1,56 +1,56 @@
 {
   "suite": "Capa 3 — PAN en texto libre",
-  "descripcion": "Numero de tarjeta suelto en el contenido. Rechaza la peticion; el gate decide el lote.",
-  "casos": [
+  "description": "Numero de tarjeta suelto en el contenido. Rechaza la peticion; el gate decide el lote.",
+  "cases": [
     {
-      "fichero": "visa-contiguo.json",
-      "peticiones": 1,
-      "por_que": "Visa de 16 digitos seguidos",
-      "esperado": "cuarentena",
-      "capas": [
+      "file": "visa-contiguo.json",
+      "requests": 1,
+      "why": "Visa de 16 digitos seguidos",
+      "expected": "quarantined",
+      "layers": [
         3
       ],
-      "rechazadas": 1
+      "rejected": 1
     },
     {
-      "fichero": "mastercard-agrupada.json",
-      "peticiones": 1,
-      "por_que": "Mastercard en grupos de cuatro",
-      "esperado": "cuarentena",
-      "capas": [
+      "file": "mastercard-agrupada.json",
+      "requests": 1,
+      "why": "Mastercard en grupos de cuatro",
+      "expected": "quarantined",
+      "layers": [
         3
       ],
-      "rechazadas": 1
+      "rejected": 1
     },
     {
-      "fichero": "amex-guiones.json",
-      "peticiones": 1,
-      "por_que": "Amex de 15 digitos con guiones",
-      "esperado": "cuarentena",
-      "capas": [
+      "file": "amex-guiones.json",
+      "requests": 1,
+      "why": "Amex de 15 digitos con guiones",
+      "expected": "quarantined",
+      "layers": [
         3
       ],
-      "rechazadas": 1
+      "rejected": 1
     },
     {
-      "fichero": "en-medio-de-un-parrafo.json",
-      "peticiones": 1,
-      "por_que": "PAN enterrado en texto largo",
-      "esperado": "cuarentena",
-      "capas": [
+      "file": "en-medio-de-un-parrafo.json",
+      "requests": 1,
+      "why": "PAN enterrado en texto largo",
+      "expected": "quarantined",
+      "layers": [
         3
       ],
-      "rechazadas": 1
+      "rejected": 1
     },
     {
-      "fichero": "en-el-system.json",
-      "peticiones": 1,
-      "por_que": "PAN en el system block, no en el mensaje",
-      "esperado": "cuarentena",
-      "capas": [
+      "file": "en-el-system.json",
+      "requests": 1,
+      "why": "PAN en el system block, no en el mensaje",
+      "expected": "quarantined",
+      "layers": [
         3
       ],
-      "rechazadas": 1
+      "rejected": 1
     }
   ]
 }

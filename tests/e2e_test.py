@@ -1,6 +1,6 @@
 """Prueba de extremo a extremo del proxy, sin tocar AWS ni Anthropic.
 
-Monta cada Lambda igual que lo hace deploy/deploy.sh (src/common + su carpeta,
+Monta cada Lambda igual que lo hace scripts/build.sh (src/common + su carpeta,
 en plano) y hace correr el pipeline completo sobre S3 y DynamoDB simulados.
 
     python3 -m venv .venv
@@ -33,23 +33,23 @@ os.environ.update({
     "INFLIGHT_LIMIT": "1000", "ENVIRONMENT": "test", "LOG_LEVEL": "ERROR",
 })
 
-FALLOS = []
+FAILURES = []
 
 
-def ck(nombre, condicion, detalle=""):
-    print(("  OK   " if condicion else "  FALLA ") + nombre
-          + ("" if condicion else f"  <- {detalle}"))
-    if not condicion:
-        FALLOS.append(nombre)
+def ck(name, condition, detail=""):
+    print(("  OK   " if condition else "  FALLA ") + name
+          + ("" if condition else f"  <- {detail}"))
+    if not condition:
+        FAILURES.append(name)
 
 
-def montar(*carpetas):
-    """Replica el empaquetado de deploy.sh."""
-    destino = tempfile.mkdtemp()
-    shutil.copytree(os.path.join(REPO, "src", "common"), destino, dirs_exist_ok=True)
-    for carpeta in carpetas:
-        shutil.copytree(os.path.join(REPO, "src", carpeta), destino, dirs_exist_ok=True)
-    return destino
+def build_event(*folders):
+    """Replica el empaquetado de scripts/build.sh."""
+    target = tempfile.mkdtemp()
+    shutil.copytree(os.path.join(REPO, "src", "common"), target, dirs_exist_ok=True)
+    for folder in folders:
+        shutil.copytree(os.path.join(REPO, "src", folder), target, dirs_exist_ok=True)
+    return target
 
 
 class Ctx:
@@ -59,120 +59,120 @@ class Ctx:
         return 900_000
 
 
-def evento_s3(bucket, key):
+def s3_event(bucket, key):
     return {"source": "aws.s3", "detail-type": "Object Created",
             "detail": {"bucket": {"name": bucket},
                        "object": {"key": key, "etag": "etag-simulado"}}}
 
 
-def peticion(cid, texto, modelo="claude-sonnet-4-5"):
+def request(cid, text, modelo="claude-sonnet-4-5"):
     return {"custom_id": cid, "params": {
         "model": modelo, "max_tokens": 256,
-        "messages": [{"role": "user", "content": texto}]}}
+        "messages": [{"role": "user", "content": text}]}}
 
 
 def main():
-    s3, tabla, cw = FakeS3(), FakeTable(), FakeCloudWatch()
+    s3, table_, cw = FakeS3(), FakeTable(), FakeCloudWatch()
 
-    def cliente(servicio, **_kw):
+    def fake_client(servicio, **_kw):
         return {"s3": s3, "cloudwatch": cw}[servicio]
 
-    pkg_san = montar("sanitizer")
-    pkg_ver = montar("sanitizer", "verificador")
+    pkg_san = build_event("sanitizer")
+    pkg_ver = build_event("sanitizer", "verifier")
     sys.path.insert(0, pkg_san)
 
-    with mock.patch("boto3.client", side_effect=cliente), \
-         mock.patch("boto3.resource", return_value=FakeResource(tabla)):
+    with mock.patch("boto3.client", side_effect=fake_client), \
+         mock.patch("boto3.resource", return_value=FakeResource(table_)):
         import handler as sanitizer
         import store
 
         print("\n[1] lote limpio -> cruza a la zona limpia")
-        doc = {"requests": [peticion(f"fila-{i}", f"Resume el documento {i}")
+        doc = {"requests": [request(f"fila-{i}", f"Resume el documento {i}")
                             for i in range(5)]}
-        s3.put_object(Bucket=RAW, Key="entrada/limpio.json",
+        s3.put_object(Bucket=RAW, Key="input/limpio.json",
                       Body=json.dumps(doc).encode())
-        r = sanitizer.lambda_handler(evento_s3(RAW, "entrada/limpio.json"), Ctx())
-        ck("estado limpio", r["estado"] == store.Status.LIMPIO, r)
-        ck("5 peticiones limpias", r["limpias"] == 5, r)
-        ck("nada en cuarentena", len(s3.claves(QUAR)) == 0, s3.claves(QUAR))
-        lote_limpio = r["batch_id"]
+        r = sanitizer.lambda_handler(s3_event(RAW, "input/limpio.json"), Ctx())
+        ck("estado limpio", r["status"] == store.Status.CLEAN_, r)
+        ck("5 peticiones limpias", r["clean"] == 5, r)
+        ck("nada en cuarentena", len(s3.keys_of(QUAR)) == 0, s3.keys_of(QUAR))
+        clean_batch = r["batch_id"]
 
-        claves_clean = s3.claves(CLEAN)
+        clean_keys = s3.keys_of(CLEAN)
         ck("un solo lote en clean/",
-           [k for k in claves_clean if k.startswith("clean/")] == [f"clean/{lote_limpio}.json"],
-           claves_clean)
-        ck("el lote escrito en clean/", f"clean/{lote_limpio}.json" in claves_clean,
-           claves_clean)
-        ck("parte de estado escrito en estado/",
-           f"estado/{lote_limpio}.json" in claves_clean, claves_clean)
+           [k for k in clean_keys if k.startswith("clean/")] == [f"clean/{clean_batch}.json"],
+           clean_keys)
+        ck("el lote escrito en clean/", f"clean/{clean_batch}.json" in clean_keys,
+           clean_keys)
+        ck("parte de estado escrito en status/",
+           f"status/{clean_batch}.json" in clean_keys, clean_keys)
 
-        parte = json.loads(s3.objetos[(CLEAN, f"estado/{lote_limpio}.json")])
-        ck("el parte dice limpio", parte["estado"] == store.Status.LIMPIO, parte)
+        part = json.loads(s3.objetos[(CLEAN, f"status/{clean_batch}.json")])
+        ck("el parte dice limpio", part["status"] == store.Status.CLEAN_, part)
         ck("conteos correctos",
-           parte["peticiones"] == {"recibidas": 5, "limpias": 5, "rechazadas": 0},
-           parte["peticiones"])
-        ck("el parte NO lleva el payload", "requests" not in parte, list(parte))
+           part["request_counts"] == {"received": 5, "clean": 5, "rejected": 0},
+           part["request_counts"])
+        ck("el parte NO lleva el payload", "requests" not in part, list(part))
 
         print("\n[2] un PAN entre cinco -> el gate aborta el lote entero")
-        doc = {"requests": [peticion(f"f-{i}", f"Documento {i}") for i in range(4)]
-               + [peticion("f-4", "paga con 4111111111111111")]}
-        s3.put_object(Bucket=RAW, Key="entrada/conpan.json",
+        doc = {"requests": [request(f"f-{i}", f"Documento {i}") for i in range(4)]
+               + [request("f-4", "paga con 4111111111111111")]}
+        s3.put_object(Bucket=RAW, Key="input/conpan.json",
                       Body=json.dumps(doc).encode())
-        r = sanitizer.lambda_handler(evento_s3(RAW, "entrada/conpan.json"), Ctx())
-        ck("lote en cuarentena", r["estado"] == store.Status.CUARENTENA, r)
-        ck("el motivo cita el gate", "gate" in r["motivo"], r["motivo"])
-        lotes_en_clean = [k for k in s3.claves(CLEAN) if k.startswith("clean/")]
-        ck("las 4 limpias TAMPOCO cruzan", lotes_en_clean == [f"clean/{lote_limpio}.json"],
-           lotes_en_clean)
-        ck("informe en cuarentena", len(s3.claves(QUAR)) == 1, s3.claves(QUAR))
+        r = sanitizer.lambda_handler(s3_event(RAW, "input/conpan.json"), Ctx())
+        ck("lote en cuarentena", r["status"] == store.Status.QUARANTINED, r)
+        ck("el motivo cita el gate", "gate" in r["reason"], r["reason"])
+        batches_in_clean = [k for k in s3.keys_of(CLEAN) if k.startswith("clean/")]
+        ck("las 4 limpias TAMPOCO cruzan", batches_in_clean == [f"clean/{clean_batch}.json"],
+           batches_in_clean)
+        ck("informe en cuarentena", len(s3.keys_of(QUAR)) == 1, s3.keys_of(QUAR))
 
-        informe = json.loads(s3.objetos[(QUAR, s3.claves(QUAR)[0])])
+        informe = json.loads(s3.objetos[(QUAR, s3.keys_of(QUAR)[0])])
         ck("el informe NO copia el payload", "requests" not in informe, list(informe))
-        ck("el informe apunta al raw", informe["origen"]["key"] == "entrada/conpan.json")
+        ck("el informe apunta al raw", informe["source"]["key"] == "input/conpan.json")
         ck("el informe no contiene el PAN",
            "4111111111111111" not in json.dumps(informe), "fuga en el informe")
 
         # El productor no tiene acceso al CDE, asi que su unica via para saber
         # que paso es el parte que queda fuera, en el bucket clean.
-        parte_rechazo = json.loads(s3.objetos[(CLEAN, f"estado/{r['batch_id']}.json")])
+        rejection_report = json.loads(s3.objetos[(CLEAN, f"status/{r['batch_id']}.json")])
         ck("hay parte de estado del lote rechazado",
-           parte_rechazo["estado"] == store.Status.CUARENTENA, parte_rechazo)
-        ck("el parte explica el motivo", "gate" in parte_rechazo["motivo"],
-           parte_rechazo["motivo"])
+           rejection_report["status"] == store.Status.QUARANTINED, rejection_report)
+        ck("el parte explica el motivo", "gate" in rejection_report["reason"],
+           rejection_report["reason"])
         ck("el parte dice que capa disparo",
-           any("pan" in k for k in parte_rechazo["resumen_por_capa"]),
-           parte_rechazo["resumen_por_capa"])
-        ck("el parte incluye que hacer", len(parte_rechazo["que_hacer"]) >= 1,
-           parte_rechazo["que_hacer"])
+           any("pan" in k for k in rejection_report["summary_by_layer"]),
+           rejection_report["summary_by_layer"])
+        ck("el parte incluye que hacer", len(rejection_report["what_to_do"]) >= 1,
+           rejection_report["what_to_do"])
         ck("el parte NO contiene el PAN",
-           "4111111111111111" not in json.dumps(parte_rechazo), "fuga en el parte")
-        ck("el parte NO contiene el payload", "requests" not in parte_rechazo,
-           list(parte_rechazo))
+           "4111111111111111" not in json.dumps(rejection_report), "fuga en el parte")
+        ck("el parte NO contiene el payload", "requests" not in rejection_report,
+           list(rejection_report))
 
         print("\n[3] SAD -> bloqueo duro, sin mirar el resto")
-        doc = {"requests": [peticion("s-0", "banda ;4111111111111111=25121011000000000?")]
-               + [peticion(f"s-{i}", f"inofensivo {i}") for i in range(1, 50)]}
-        s3.put_object(Bucket=RAW, Key="entrada/sad.json", Body=json.dumps(doc).encode())
-        r = sanitizer.lambda_handler(evento_s3(RAW, "entrada/sad.json"), Ctx())
-        ck("cuarentena por bloqueo duro", r["estado"] == store.Status.CUARENTENA, r)
-        ck("el motivo dice bloqueo duro", "bloqueo duro" in r["motivo"], r["motivo"])
-        ck("metrica BloqueoDuro emitida", "BloqueoDuro" in cw.nombres(), cw.nombres())
+        doc = {"requests": [request("s-0", "banda ;4111111111111111=25121011000000000?")]
+               + [request(f"s-{i}", f"inofensivo {i}") for i in range(1, 50)]}
+        s3.put_object(Bucket=RAW, Key="input/sad.json", Body=json.dumps(doc).encode())
+        r = sanitizer.lambda_handler(s3_event(RAW, "input/sad.json"), Ctx())
+        ck("cuarentena por bloqueo duro", r["status"] == store.Status.QUARANTINED, r)
+        ck("el motivo dice bloqueo duro", "bloqueo duro" in r["reason"], r["reason"])
+        ck("metrica HardBlock emitida", "HardBlock" in cw.names(), cw.names())
 
         print("\n[4] envelope deny-by-default")
         doc = {"requests": [{"custom_id": "x", "params": {
             "model": "claude-sonnet-4-5", "max_tokens": 10,
             "messages": [{"role": "user", "content": "hola"}],
             "pan": "4111111111111111"}}]}
-        s3.put_object(Bucket=RAW, Key="entrada/clave.json", Body=json.dumps(doc).encode())
-        r = sanitizer.lambda_handler(evento_s3(RAW, "entrada/clave.json"), Ctx())
+        s3.put_object(Bucket=RAW, Key="input/clave.json", Body=json.dumps(doc).encode())
+        r = sanitizer.lambda_handler(s3_event(RAW, "input/clave.json"), Ctx())
         ck("clave desconocida en params -> cuarentena",
-           r["estado"] == store.Status.CUARENTENA, r)
+           r["status"] == store.Status.QUARANTINED, r)
 
-        doc = {"requests": [peticion("y", "hola")], "campo_raro": 1}
-        s3.put_object(Bucket=RAW, Key="entrada/raiz.json", Body=json.dumps(doc).encode())
-        r = sanitizer.lambda_handler(evento_s3(RAW, "entrada/raiz.json"), Ctx())
+        doc = {"requests": [request("y", "hola")], "campo_raro": 1}
+        s3.put_object(Bucket=RAW, Key="input/raiz.json", Body=json.dumps(doc).encode())
+        r = sanitizer.lambda_handler(s3_event(RAW, "input/raiz.json"), Ctx())
         ck("clave desconocida en la raiz -> cuarentena",
-           r["estado"] == store.Status.CUARENTENA, r)
+           r["status"] == store.Status.QUARANTINED, r)
 
         print("\n[4b] el custom_id tambien se escanea")
         # Regresion: el custom_id viaja a Anthropic tal cual, pero solo se
@@ -181,71 +181,71 @@ def main():
         doc = {"requests": [{"custom_id": "4111111111111111", "params": {
             "model": "claude-sonnet-4-5", "max_tokens": 10,
             "messages": [{"role": "user", "content": "contenido perfectamente limpio"}]}}]}
-        s3.put_object(Bucket=RAW, Key="entrada/cid.json", Body=json.dumps(doc).encode())
-        r = sanitizer.lambda_handler(evento_s3(RAW, "entrada/cid.json"), Ctx())
+        s3.put_object(Bucket=RAW, Key="input/cid.json", Body=json.dumps(doc).encode())
+        r = sanitizer.lambda_handler(s3_event(RAW, "input/cid.json"), Ctx())
         ck("PAN en el custom_id -> cuarentena",
-           r["estado"] == store.Status.CUARENTENA, r)
-        parte_cid = json.loads(s3.objetos[(CLEAN, f"estado/{r['batch_id']}.json")])
+           r["status"] == store.Status.QUARANTINED, r)
+        part_cid = json.loads(s3.objetos[(CLEAN, f"status/{r['batch_id']}.json")])
         ck("el hallazgo apunta al custom_id",
-           any("custom_id" in h.get("donde", "")
-               for rz in parte_cid.get("rechazos", [])
-               for h in rz.get("hallazgos", [])),
-           parte_cid.get("rechazos"))
+           any("custom_id" in h.get("where", "")
+               for rz in part_cid.get("rejections", [])
+               for h in rz.get("findings", [])),
+           part_cid.get("rejections"))
 
         print("\n[5] modelo fuera de la lista blanca")
-        doc = {"requests": [peticion("z", "hola", modelo="gpt-4")]}
-        s3.put_object(Bucket=RAW, Key="entrada/modelo.json", Body=json.dumps(doc).encode())
-        r = sanitizer.lambda_handler(evento_s3(RAW, "entrada/modelo.json"), Ctx())
-        ck("modelo no permitido -> cuarentena", r["estado"] == store.Status.CUARENTENA, r)
+        doc = {"requests": [request("z", "hola", modelo="gpt-4")]}
+        s3.put_object(Bucket=RAW, Key="input/modelo.json", Body=json.dumps(doc).encode())
+        r = sanitizer.lambda_handler(s3_event(RAW, "input/modelo.json"), Ctx())
+        ck("modelo no permitido -> cuarentena", r["status"] == store.Status.QUARANTINED, r)
 
         print("\n[6] reentrega del mismo objeto: id estable, sin duplicar")
-        antes = len(tabla.items)
-        r2 = sanitizer.lambda_handler(evento_s3(RAW, "entrada/limpio.json"), Ctx())
-        ck("mismo batch_id", r2["batch_id"] == lote_limpio, (r2["batch_id"], lote_limpio))
-        ck("no aparecen items nuevos", len(tabla.items) == antes, (antes, len(tabla.items)))
+        antes = len(table_.items)
+        r2 = sanitizer.lambda_handler(s3_event(RAW, "input/limpio.json"), Ctx())
+        ck("mismo batch_id", r2["batch_id"] == clean_batch, (r2["batch_id"], clean_batch))
+        ck("no aparecen items nuevos", len(table_.items) == antes, (antes, len(table_.items)))
 
-        print("\n[7] el canario debe quedar bloqueado")
+        print("\n[7] el canary debe quedar bloqueado")
         # Se importan del modulo real que usa la Lambda, no de una copia: si
-        # alguien anade un caso al canario, esta prueba lo cubre sola.
-        sys.path.insert(0, os.path.join(REPO, "src", "canario"))
-        from casos import CASOS
-        doc = {"requests": [peticion(f"canario-{i}", texto)
-                            for i, (_nombre, texto) in enumerate(CASOS)]}
-        s3.put_object(Bucket=RAW, Key="canario/prueba.json", Body=json.dumps(doc).encode())
-        r = sanitizer.lambda_handler(evento_s3(RAW, "canario/prueba.json"), Ctx())
-        ck("el canario NO cruza", r["estado"] == store.Status.CUARENTENA, r)
-        item = tabla.items[r["batch_id"]]
-        ck("marcado como canario", item.get("es_canario") is True, item.get("es_canario"))
-        # Un canario bloqueado es una buena noticia, no una incidencia: no puede
+        # alguien anade un caso al canary, esta prueba lo cubre sola.
+        sys.path.insert(0, os.path.join(REPO, "src", "canary"))
+        from cases import CASES
+        doc = {"requests": [request(f"canary-{i}", text)
+                            for i, (_name, text) in enumerate(CASES)]}
+        s3.put_object(Bucket=RAW, Key="canary/test.json", Body=json.dumps(doc).encode())
+        r = sanitizer.lambda_handler(s3_event(RAW, "canary/test.json"), Ctx())
+        ck("el canary NO cruza", r["status"] == store.Status.QUARANTINED, r)
+        item = table_.items[r["batch_id"]]
+        ck("marcado como canary", item.get("is_canary") is True, item.get("is_canary"))
+        # Un canary bloqueado es una buena noticia, no una incidencia: no puede
         # compartir metrica con los productores o la alarma suena a diario por
         # un exito, y en dos semanas nadie la mira.
-        ck("emite CanarioBloqueoDuro, no BloqueoDuro",
-           "CanarioBloqueoDuro" in cw.nombres() and
-           cw.nombres().count("BloqueoDuro") == 1,   # solo la del caso [3], real
-           [n for n in cw.nombres() if "Bloqueo" in n])
-        ck("y CanarioEnCuarentena, no LotesEnCuarentena",
-           "CanarioEnCuarentena" in cw.nombres(),
-           [n for n in cw.nombres() if "uarentena" in n])
+        ck("emite CanaryHardBlock, no HardBlock",
+           "CanaryHardBlock" in cw.names() and
+           cw.names().count("HardBlock") == 1,   # solo la del caso [3], real
+           [n for n in cw.names() if "Bloqueo" in n])
+        ck("y CanaryQuarantined, no BatchesQuarantined",
+           "CanaryQuarantined" in cw.names(),
+           [n for n in cw.names() if "uarentena" in n])
 
-    # --- verificador, sobre el objeto que el sanitizer dio por bueno --------
+    # --- verifier, sobre el objeto que el sanitizer dio por bueno --------
     for modulo in ("handler", "store", "config", "logs", "detectors", "normalize",
                    "envelope", "secret_store", "anthropic_batches"):
         sys.modules.pop(modulo, None)
     sys.path.remove(pkg_san)
     sys.path.insert(0, pkg_ver)
 
-    with mock.patch("boto3.client", side_effect=cliente), \
-         mock.patch("boto3.resource", return_value=FakeResource(tabla)):
-        import handler as verificador
+    with mock.patch("boto3.client", side_effect=fake_client), \
+         mock.patch("boto3.resource", return_value=FakeResource(table_)):
+        import handler as verifier
         import store as store2
 
-        print("\n[8] verificador sobre datos limpios de verdad")
-        clave_limpia = s3.claves(CLEAN)[0]
-        r = verificador.lambda_handler(evento_s3(CLEAN, clave_limpia), Ctx())
-        ck("estado verificado", r["estado"] == store2.Status.VERIFICADO, r)
-        ck("el objeto sigue en clean", (CLEAN, clave_limpia) in s3.objetos)
+        print("\n[8] verifier sobre datos limpios de verdad")
+        clean_key = s3.keys_of(CLEAN)[0]
+        r = verifier.lambda_handler(s3_event(CLEAN, clean_key), Ctx())
+        ck("estado verificado", r["status"] == store2.Status.VERIFIED, r)
+        ck("el objeto sigue en clean", (CLEAN, clean_key) in s3.objetos)
 
-        print("\n[9] verificador ante un fallo del sanitizer")
+        print("\n[9] verifier ante un fallo del sanitizer")
         # Se falsifica un objeto limpio con un PAN partido por puntos: el
         # regex del sanitizer es ciego a eso, la ventana deslizante no.
         envenenado = {"batch_id": "b_envenenado", "requests": [
@@ -254,18 +254,34 @@ def main():
                 "messages": [{"role": "user", "content": "ref 4111.1111.1111.1111"}]}}]}
         s3.put_object(Bucket=CLEAN, Key="clean/b_envenenado.json",
                       Body=json.dumps(envenenado).encode())
-        r = verificador.lambda_handler(evento_s3(CLEAN, "clean/b_envenenado.json"), Ctx())
-        ck("detecta el PAN en zona limpia", r["estado"] == store2.Status.CUARENTENA, r)
+        r = verifier.lambda_handler(s3_event(CLEAN, "clean/b_envenenado.json"), Ctx())
+        ck("detecta el PAN en zona limpia", r["status"] == store2.Status.QUARANTINED, r)
         ck("borra el objeto de clean",
-           (CLEAN, "clean/b_envenenado.json") not in s3.objetos, s3.claves(CLEAN))
+           (CLEAN, "clean/b_envenenado.json") not in s3.objetos, s3.keys_of(CLEAN))
         ck("deja informe en cuarentena",
-           any("verificador" in k for k in s3.claves(QUAR)), s3.claves(QUAR))
-        ck("alarma FalloDelSanitizer", "FalloDelSanitizer" in cw.nombres())
+           any("verifier" in k for k in s3.keys_of(QUAR)), s3.keys_of(QUAR))
+        ck("alarma SanitizerFailure", "SanitizerFailure" in cw.names())
+
+        print("\n[9b] el verifier solo mira clean/")
+        # El bucket clean tiene tres prefijos y solo uno lleva lotes. Bajo
+        # 'input/' aterriza ahora el manifiesto y bajo 'status/' los partes
+        # del sanitizer: ninguno trae 'requests', asi que si el verifier los
+        # procesara marcaria VERIFIED un batch_id que es una clave de S3.
+        for prefijo in ("input/", "status/"):
+            clave = f"{prefijo}algo.json"
+            s3.put_object(Bucket=CLEAN, Key=clave, Body=b'{"files": ["x.json"]}')
+            antes = dict(table_.items)
+            r = verifier.lambda_handler(s3_event(CLEAN, clave), Ctx())
+            ck(f"{prefijo} no despierta al verifier",
+               r.get("skipped", "").startswith("fuera de"), r)
+            ck(f"{prefijo} no toca la tabla", table_.items == antes,
+               set(table_.items) ^ set(antes))
+            ck(f"{prefijo} no borra el objeto", (CLEAN, clave) in s3.objetos)
 
         print("\n[10] admision: la cola en vuelo no se puede sobrepasar")
-        store2.update("b_uno", status=store2.Status.VERIFICADO, request_count=600,
+        store2.update("b_uno", status=store2.Status.VERIFIED, request_count=600,
                       created_at="2026-01-01T00:00:00+00:00")
-        store2.update("b_dos", status=store2.Status.VERIFICADO, request_count=600,
+        store2.update("b_dos", status=store2.Status.VERIFIED, request_count=600,
                       created_at="2026-01-01T00:01:00+00:00")
         ck("cola vacia al empezar", store2.inflight() == 0, store2.inflight())
         ck("el primero entra (600/1000)", store2.try_admit("b_uno", 600, 1000) is True)
@@ -282,8 +298,8 @@ def main():
 
     shutil.rmtree(pkg_san, ignore_errors=True)
     shutil.rmtree(pkg_ver, ignore_errors=True)
-    print("\n" + ("TODO OK" if not FALLOS else f"{len(FALLOS)} FALLOS: {FALLOS}"))
-    return 1 if FALLOS else 0
+    print("\n" + ("TODO OK" if not FAILURES else f"{len(FAILURES)} FALLOS: {FAILURES}"))
+    return 1 if FAILURES else 0
 
 
 if __name__ == "__main__":

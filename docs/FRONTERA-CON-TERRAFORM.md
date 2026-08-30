@@ -126,8 +126,8 @@ lambda:PublishLayerVersion
 lambda:ListLayerVersions
 ```
 
-Sobre las funciones `intelica-proxy-ia-<entorno>-*` y el layer
-`intelica-proxy-ia-<entorno>-deps`, **acotado cada rol a su propio entorno**:
+Sobre las funciones `itl-0003-proxy-ia-<entorno>-lambda-*-03` y el layer
+`itl-0003-proxy-ia-<entorno>-lambda-deps-03`, **acotado cada rol a su propio entorno**:
 el rol de qa no debe poder tocar prod. **Nada de S3, DynamoDB, KMS ni IAM**: el CI
 despliega código, no toca datos ni permisos. Si el rol del CI puede leer el bucket
 raw, la frontera del sistema se ha roto por la puerta de atrás.

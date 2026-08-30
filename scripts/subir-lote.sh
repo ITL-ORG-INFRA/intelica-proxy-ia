@@ -11,19 +11,32 @@
 # El orden tambien importa: las partes primero, el manifiesto al final. Es lo
 # que hace que el caso normal sea envio inmediato en vez de esperar al barrido.
 #
+# Las partes y el manifiesto NO van al mismo bucket:
+#
+#   partes      -> s3://<raw>/input/<lote>/parte-NN.json
+#   manifiesto  -> s3://<clean>/input/<lote>/_MANIFEST.json
+#
+# El manifiesto no lleva datos, solo la lista de lo que compone el lote, asi
+# que no tiene por que entrar en el CDE. Dejarlo fuera permite ademas que el
+# productor lo escriba sin permiso de escritura sobre raw mas alla de las
+# partes, y que el submitter —que no puede leer raw— lo lea por si mismo.
+#
 #   ./scripts/subir-lote.sh dev ./mi-carpeta
 #   ./scripts/subir-lote.sh dev ./mi-carpeta lote-agosto     nombre del lote
 #   ./scripts/subir-lote.sh dev ./mi-carpeta --solo-manifiesto   ver sin subir
 # ---------------------------------------------------------------------------
 set -Eeuo pipefail
 
+RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=scripts/lib/nombres.sh
+source "${RAIZ}/scripts/lib/nombres.sh"
+
 ENTORNO="${1:-}"
 CARPETA="${2:-}"
 NOMBRE="${3:-}"
 
-PROYECTO="${PROYECTO:-intelica-proxy-ia}"
 REGION="${AWS_REGION:-eu-south-2}"
-PREFIJO="${PREFIJO:-entrada}"
+PREFIJO="${PREFIJO:-${ITL_PREFIX_INPUT%/}}"
 
 SOLO_MANIFIESTO=false
 [[ "$NOMBRE" == "--solo-manifiesto" ]] && { SOLO_MANIFIESTO=true; NOMBRE=""; }
@@ -50,7 +63,7 @@ done
 PARTES=()
 while IFS= read -r f; do PARTES+=("$f"); done < <(
   find "$CARPETA" -maxdepth 1 -type f -name '*.json' \
-    ! -name '_MANIFEST.json' ! -name 'manifiesto.json' | sort)
+    ! -name "$ITL_MANIFEST_SUFFIX" ! -name 'manifiesto.json' | sort)
 
 [[ ${#PARTES[@]} -gt 0 ]] || die "no hay ficheros .json de datos en ${CARPETA}"
 
@@ -98,10 +111,10 @@ ok "$TOTAL peticiones, todos los custom_id unicos"
 
 # --- el manifiesto ---------------------------------------------------------
 MANIFIESTO="$(jq -nc \
-  --arg lote "$NOMBRE" \
+  --arg batch "$NOMBRE" \
   --argjson files "$(printf '%s\n' "${NOMBRES[@]}" | jq -R . | jq -sc .)" \
   --argjson total "$TOTAL" \
-  '{lote: $lote, files: $files, total_requests: $total}')"
+  '{batch: $batch, files: $files, total_requests: $total}')"
 
 paso "Manifiesto"
 jq . <<<"$MANIFIESTO" | sed 's/^/    /'
@@ -113,12 +126,17 @@ fi
 
 # --- subir -----------------------------------------------------------------
 AWS=(aws --region "$REGION" --output json)
-CUENTA="$("${AWS[@]}" sts get-caller-identity | jq -r .Account)" \
+# Los nombres de bucket ya no llevan el id de cuenta, pero la llamada se queda:
+# es la forma barata de fallar aqui si las credenciales caducaron, en vez de a
+# mitad de subida con medio lote arriba.
+"${AWS[@]}" sts get-caller-identity >/dev/null \
   || die "credenciales AWS invalidas o expiradas"
-RAW="${PROYECTO}-${ENTORNO}-raw-${CUENTA}"
+RAW="$(itl_bucket "$ENTORNO" raw)"
+CLEAN="$(itl_bucket "$ENTORNO" clean)"
+TABLA="$(itl_table "$ENTORNO")"
 DESTINO="${PREFIJO}/${NOMBRE}"
 
-paso "Subiendo a s3://${RAW}/${DESTINO}/"
+paso "Subiendo las partes a s3://${RAW}/${DESTINO}/"
 
 for ruta in "${PARTES[@]}"; do
   base="$(basename "$ruta")"
@@ -127,34 +145,38 @@ for ruta in "${PARTES[@]}"; do
   ok "$base"
 done
 
-# El manifiesto AL FINAL. Es la señal de "ya esta todo": subirlo antes no
-# rompe nada —el lote queda esperando y el barrido lo recoge— pero retrasa el
-# envio hasta el siguiente tick.
-"${AWS[@]}" s3api put-object --bucket "$RAW" --key "${DESTINO}/_MANIFEST.json" \
-  --body <(echo "$MANIFIESTO") --content-type application/json >/dev/null 2>&1 \
-  || echo "$MANIFIESTO" | "${AWS[@]}" s3api put-object --bucket "$RAW" \
-       --key "${DESTINO}/_MANIFEST.json" --body /dev/stdin >/dev/null
-printf '    %s✓%s %s  %s(dispara el envio)%s\n' "$VERDE" "$R" "_MANIFEST.json" "$D" "$R"
+# El manifiesto AL FINAL, y en clean. Es la señal de "ya esta todo": subirlo
+# antes no rompe nada —el lote queda esperando y el barrido lo recoge— pero
+# retrasa el envio hasta el siguiente tick.
+#
+# La carpeta del lote es la misma clave en los dos buckets (input/<lote>), que
+# es lo que permite al submitter emparejar el manifiesto con sus partes sin
+# tener que leer raw.
+paso "Subiendo el manifiesto a s3://${CLEAN}/${DESTINO}/"
+MANIFEST_KEY="${DESTINO}/${ITL_MANIFEST_SUFFIX}"
+echo "$MANIFIESTO" | "${AWS[@]}" s3api put-object --bucket "$CLEAN" \
+  --key "$MANIFEST_KEY" --body /dev/stdin \
+  --content-type application/json >/dev/null
+printf '    %s✓%s %s  %s(dispara el envio)%s\n' \
+  "$VERDE" "$R" "$ITL_MANIFEST_SUFFIX" "$D" "$R"
 
 # --- que mirar -------------------------------------------------------------
-TABLA="${PROYECTO}-${ENTORNO}-batches"
-CLEAN="${PROYECTO}-${ENTORNO}-clean-${CUENTA}"
 
 paso "Seguimiento"
 cat <<SEGUIR
     Estado del lote:
 
       aws dynamodb get-item --table-name ${TABLA} \\
-        --key '{"batch_id":{"S":"lote#${DESTINO}"}}' --region ${REGION} \\
-        | jq '.Item | {status:.status.S, limpias:.partes_limpias.N,
-                       esperadas:.partes_esperadas.N,
-                       batch_ids:[.batch_ids.L[]?.S], motivo:.motivo.S}'
+        --key '{"batch_id":{"S":"batch#${DESTINO}"}}' --region ${REGION} \\
+        | jq '.Item | {status:.status.S, clean:.clean_parts.N,
+                       expected:.expected_parts.N,
+                       batch_ids:[.batch_ids.L[]?.S], reason:.reason.S}'
 
     Parte de estado de cada fichero:
 
-      aws s3 ls s3://${CLEAN}/estado/ --region ${REGION}
+      aws s3 ls s3://${CLEAN}/${ITL_PREFIX_STATUS} --region ${REGION}
 
-    ${D}enviado = ya esta en Anthropic · esperando_partes = el sanitizer sigue
-    cuarentena = alguna parte fue rechazada, no se envio ninguna${R}
+    ${D}submitted = ya esta en Anthropic · awaiting_parts = el sanitizer sigue
+    quarantined = alguna parte fue rechazada, no se envio ninguna${R}
 
 SEGUIR

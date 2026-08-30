@@ -1,30 +1,40 @@
 # Quien tiene que revisar que.
 #
-# ATENCION: los equipos de abajo son marcadores de posicion. Sustituyelos por
-# los reales de la organizacion antes de confiar en este fichero — GitHub
-# ignora en silencio las entradas que apuntan a equipos que no existen, asi que
-# un CODEOWNERS mal puesto no protege nada y ademas lo parece.
+# Hoy no hay equipos en la organizacion, asi que todo apunta a una persona.
+# Se escribe el USUARIO de GitHub, no el correo: el correo tambien vale, pero
+# solo si esta anadido y verificado en la cuenta, y si no lo esta GitHub ignora
+# la linea EN SILENCIO. Un CODEOWNERS que no protege nada y ademas lo parece es
+# peor que no tenerlo.
+#
+# Las rutas se mantienen separadas aunque todas lleven al mismo sitio. No es
+# redundancia: dicen que partes son el control de seguridad, y el dia que
+# existan los equipos basta con cambiar el dueno de esas lineas en vez de
+# volver a razonar cuales eran.
+#
+# Gana la ULTIMA regla que casa, no la mas especifica.
 
 # Por defecto
-*                           @ITL-ORG-INFRA/plataforma
+*                           @DiegoDelavegabat
 
 # --- componentes PCI -------------------------------------------------------
 # Estos ficheros SON el control de seguridad. Un cambio aqui puede dejar pasar
 # datos de tarjeta sin que ninguna prueba falle, asi que no se mergean sin que
 # los mire alguien que entienda el modelo de amenaza.
-/src/sanitizer/             @ITL-ORG-INFRA/seguridad @ITL-ORG-INFRA/plataforma
-/src/verificador/           @ITL-ORG-INFRA/seguridad @ITL-ORG-INFRA/plataforma
-/src/canario/               @ITL-ORG-INFRA/seguridad @ITL-ORG-INFRA/plataforma
+#
+# Cuando exista el equipo de seguridad, estas cuatro lineas son las suyas.
+/src/sanitizer/             @DiegoDelavegabat
+/src/verifier/              @DiegoDelavegabat
+/src/canary/                @DiegoDelavegabat
 
 # La segunda implementacion tiene que seguir siendo INDEPENDIENTE de la
 # primera. Si alguien "refactoriza para reutilizar codigo" entre las dos, el
-# verificador deja de verificar y nadie se entera.
-/src/verificador/deteccion2.py  @ITL-ORG-INFRA/seguridad
+# verifier deja de verificar y nadie se entera.
+/src/verifier/detection2.py @DiegoDelavegabat
 
 # Cualquier numero nuevo que parezca una tarjeta pasa por aqui.
 # Ver docs/SOBRE-LOS-PANES-DE-PRUEBA.md
-/tests/                     @ITL-ORG-INFRA/seguridad @ITL-ORG-INFRA/plataforma
+/tests/                     @DiegoDelavegabat
 
 # --- despliegue ------------------------------------------------------------
-/.github/workflows/         @ITL-ORG-INFRA/plataforma
-/scripts/                   @ITL-ORG-INFRA/plataforma
+/.github/workflows/         @DiegoDelavegabat
+/scripts/                   @DiegoDelavegabat

@@ -1,46 +1,46 @@
 {
   "suite": "Capa 4 — SAD (bloqueo duro)",
-  "descripcion": "Datos de autenticacion. Nunca almacenables, ni cifrados. Abortan el LOTE ENTERO sin mirar el resto.",
-  "casos": [
+  "description": "Datos de autenticacion. Nunca almacenables, ni cifrados. Abortan el LOTE ENTERO sin mirar el resto.",
+  "cases": [
     {
-      "fichero": "banda-track2.json",
-      "peticiones": 25,
-      "por_que": "track2 en la primera de 25: el lote entero cae",
-      "esperado": "cuarentena",
-      "capas": [
+      "file": "banda-track2.json",
+      "requests": 25,
+      "why": "track2 en la primera de 25: el lote entero cae",
+      "expected": "quarantined",
+      "layers": [
         4
       ],
-      "duro": true
+      "hard": true
     },
     {
-      "fichero": "banda-track1.json",
-      "peticiones": 1,
-      "por_que": "track1 completo",
-      "esperado": "cuarentena",
-      "capas": [
+      "file": "banda-track1.json",
+      "requests": 1,
+      "why": "track1 completo",
+      "expected": "quarantined",
+      "layers": [
         4
       ],
-      "duro": true
+      "hard": true
     },
     {
-      "fichero": "cvv-en-contexto.json",
-      "peticiones": 1,
-      "por_que": "CVV junto a la palabra que lo identifica",
-      "esperado": "cuarentena",
-      "capas": [
+      "file": "cvv-en-contexto.json",
+      "requests": 1,
+      "why": "CVV junto a la palabra que lo identifica",
+      "expected": "quarantined",
+      "layers": [
         4
       ],
-      "duro": true
+      "hard": true
     },
     {
-      "fichero": "pin-en-contexto.json",
-      "peticiones": 1,
-      "por_que": "PIN en contexto",
-      "esperado": "cuarentena",
-      "capas": [
+      "file": "pin-en-contexto.json",
+      "requests": 1,
+      "why": "PIN en contexto",
+      "expected": "quarantined",
+      "layers": [
         4
       ],
-      "duro": true
+      "hard": true
     }
   ]
 }

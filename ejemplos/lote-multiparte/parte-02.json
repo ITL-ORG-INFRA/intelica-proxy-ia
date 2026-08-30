@@ -1,0 +1,348 @@
+{
+  "requests": [
+    {
+      "custom_id": "ARG-3CD2001T-92ef4a11",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 2000,
+        "system": [
+          {
+            "type": "text",
+            "text": "You are an information extraction system for card scheme pricing guides.\n\nYou will receive ONE text chunk from a PDF. Extract only billing events that the scheme charges to an acquirer or issuer. Ignore narrative text, footnotes, and cross-references to other sections.\n\nFor each billing event you find, return one object with these fields:\n  fee_code        the alphanumeric identifier as printed\n  fee_name        the official name, verbatim\n  billed_party    acquirer | issuer\n  region          the geography the fee applies to\n  amount          the value as printed, including currency or percentage\n  frequency       how often the scheme bills it\n  effective_date  ISO 8601, or null if the chunk does not state one\n  notes           any condition that changes the amount\n\nIf the chunk contains no billing event, return an empty list. Do not infer values that are not present in the text. Do not merge two fees into one entry.",
+            "cache_control": {
+              "type": "ephemeral"
+            }
+          }
+        ],
+        "output_config": {
+          "format": {
+            "type": "json_schema",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "billing_events": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "fee_code": {
+                        "type": "string"
+                      },
+                      "fee_name": {
+                        "type": "string"
+                      },
+                      "billed_party": {
+                        "type": "string",
+                        "enum": [
+                          "acquirer",
+                          "issuer"
+                        ]
+                      },
+                      "region": {
+                        "type": "string"
+                      },
+                      "amount": {
+                        "type": "string"
+                      },
+                      "frequency": {
+                        "type": "string"
+                      },
+                      "effective_date": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "notes": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "fee_code",
+                      "fee_name",
+                      "billed_party",
+                      "region",
+                      "amount",
+                      "frequency",
+                      "effective_date",
+                      "notes"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "billing_events"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "--- PAGE 41 ---\n3CD2001T    Clearing Acquirer Fee Intraregional\nCL\nUSD 0.0031 per clearing message, billed weekly to the acquirer. Applies to intraregional transactions only. Reversals within the same clearing cycle are netted and not billed separately.\nEffective 15 April 2026."
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ARG-3CD2004I-1d8b60fa",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 2000,
+        "system": [
+          {
+            "type": "text",
+            "text": "You are an information extraction system for card scheme pricing guides.\n\nYou will receive ONE text chunk from a PDF. Extract only billing events that the scheme charges to an acquirer or issuer. Ignore narrative text, footnotes, and cross-references to other sections.\n\nFor each billing event you find, return one object with these fields:\n  fee_code        the alphanumeric identifier as printed\n  fee_name        the official name, verbatim\n  billed_party    acquirer | issuer\n  region          the geography the fee applies to\n  amount          the value as printed, including currency or percentage\n  frequency       how often the scheme bills it\n  effective_date  ISO 8601, or null if the chunk does not state one\n  notes           any condition that changes the amount\n\nIf the chunk contains no billing event, return an empty list. Do not infer values that are not present in the text. Do not merge two fees into one entry.",
+            "cache_control": {
+              "type": "ephemeral"
+            }
+          }
+        ],
+        "output_config": {
+          "format": {
+            "type": "json_schema",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "billing_events": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "fee_code": {
+                        "type": "string"
+                      },
+                      "fee_name": {
+                        "type": "string"
+                      },
+                      "billed_party": {
+                        "type": "string",
+                        "enum": [
+                          "acquirer",
+                          "issuer"
+                        ]
+                      },
+                      "region": {
+                        "type": "string"
+                      },
+                      "amount": {
+                        "type": "string"
+                      },
+                      "frequency": {
+                        "type": "string"
+                      },
+                      "effective_date": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "notes": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "fee_code",
+                      "fee_name",
+                      "billed_party",
+                      "region",
+                      "amount",
+                      "frequency",
+                      "effective_date",
+                      "notes"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "billing_events"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "--- PAGE 42 ---\n3CD2004I    Issuer Cross-Border Assessment\nCB\n0.60% of the transaction amount for transactions where the issuer country differs from the merchant country. Billed monthly. For amounts above EUR 25,000 the marginal rate drops to 0.45%."
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ARG-3CD2009T-77c05e3b",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 2000,
+        "system": [
+          {
+            "type": "text",
+            "text": "You are an information extraction system for card scheme pricing guides.\n\nYou will receive ONE text chunk from a PDF. Extract only billing events that the scheme charges to an acquirer or issuer. Ignore narrative text, footnotes, and cross-references to other sections.\n\nFor each billing event you find, return one object with these fields:\n  fee_code        the alphanumeric identifier as printed\n  fee_name        the official name, verbatim\n  billed_party    acquirer | issuer\n  region          the geography the fee applies to\n  amount          the value as printed, including currency or percentage\n  frequency       how often the scheme bills it\n  effective_date  ISO 8601, or null if the chunk does not state one\n  notes           any condition that changes the amount\n\nIf the chunk contains no billing event, return an empty list. Do not infer values that are not present in the text. Do not merge two fees into one entry.",
+            "cache_control": {
+              "type": "ephemeral"
+            }
+          }
+        ],
+        "output_config": {
+          "format": {
+            "type": "json_schema",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "billing_events": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "fee_code": {
+                        "type": "string"
+                      },
+                      "fee_name": {
+                        "type": "string"
+                      },
+                      "billed_party": {
+                        "type": "string",
+                        "enum": [
+                          "acquirer",
+                          "issuer"
+                        ]
+                      },
+                      "region": {
+                        "type": "string"
+                      },
+                      "amount": {
+                        "type": "string"
+                      },
+                      "frequency": {
+                        "type": "string"
+                      },
+                      "effective_date": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "notes": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "fee_code",
+                      "fee_name",
+                      "billed_party",
+                      "region",
+                      "amount",
+                      "frequency",
+                      "effective_date",
+                      "notes"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "billing_events"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "--- PAGE 43 ---\n3CD2009T    Acquirer Brand Usage Fee\nBU\nAnnual fee of EUR 12,500 per licensed brand, prorated monthly from the date of first use. Acquirers processing fewer than 500,000 transactions in the preceding twelve months are exempt."
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "ARG-3CD2011T-a4e19b56",
+      "params": {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 2000,
+        "system": [
+          {
+            "type": "text",
+            "text": "You are an information extraction system for card scheme pricing guides.\n\nYou will receive ONE text chunk from a PDF. Extract only billing events that the scheme charges to an acquirer or issuer. Ignore narrative text, footnotes, and cross-references to other sections.\n\nFor each billing event you find, return one object with these fields:\n  fee_code        the alphanumeric identifier as printed\n  fee_name        the official name, verbatim\n  billed_party    acquirer | issuer\n  region          the geography the fee applies to\n  amount          the value as printed, including currency or percentage\n  frequency       how often the scheme bills it\n  effective_date  ISO 8601, or null if the chunk does not state one\n  notes           any condition that changes the amount\n\nIf the chunk contains no billing event, return an empty list. Do not infer values that are not present in the text. Do not merge two fees into one entry.",
+            "cache_control": {
+              "type": "ephemeral"
+            }
+          }
+        ],
+        "output_config": {
+          "format": {
+            "type": "json_schema",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "billing_events": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "fee_code": {
+                        "type": "string"
+                      },
+                      "fee_name": {
+                        "type": "string"
+                      },
+                      "billed_party": {
+                        "type": "string",
+                        "enum": [
+                          "acquirer",
+                          "issuer"
+                        ]
+                      },
+                      "region": {
+                        "type": "string"
+                      },
+                      "amount": {
+                        "type": "string"
+                      },
+                      "frequency": {
+                        "type": "string"
+                      },
+                      "effective_date": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "notes": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "fee_code",
+                      "fee_name",
+                      "billed_party",
+                      "region",
+                      "amount",
+                      "frequency",
+                      "effective_date",
+                      "notes"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "billing_events"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "--- PAGE 44 ---\n3CD2011T    Excessive Chargeback Handling Fee\nEC\nUSD 25.00 per chargeback once the merchant exceeds a ratio of 1.5% for two consecutive months. Billed to the acquirer monthly. The ratio is computed over the count, not the value, of settled transactions."
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -4,26 +4,36 @@ Paso a paso para mandar trabajo al proxy cuando el lote se parte en varios
 ficheros. Es el flujo que usa el equipo de Cuotas con las guías de tarifas de
 Mastercard.
 
-> **Estado:** el disparo por `_MANIFEST.json` necesita un cambio en el repo de
-> Terraform que **todavía no está aplicado** (ver
-> [PROMPT-TERRAFORM-MANIFIESTO.md](PROMPT-TERRAFORM-MANIFIESTO.md)). Hasta
-> entonces, cada `.json` se procesa por separado y subir el manifiesto no
-> dispara el envío. El resto de esta guía ya es válido.
+> **Estado:** el disparo por `_MANIFEST.json` necesita una regla en el repo de
+> Terraform —sobre el bucket **clean**, prefijo `input/` y sufijo
+> `_MANIFEST.json`— que hay que confirmar que está aplicada (ver
+> [PROMPT-TERRAFORM-MANIFIESTO.md](PROMPT-TERRAFORM-MANIFIESTO.md)). Sin ella
+> cada `.json` se procesa por separado y subir el manifiesto no dispara el
+> envío. El resto de esta guía ya es válido.
 
 ---
 
 ## El mapa
 
+Las partes y el manifiesto van a **buckets distintos**, bajo la **misma**
+carpeta `input/lote-2026-08-27/`:
+
 ```
-raw/entrada/lote-2026-08-27/
+raw/input/lote-2026-08-27/
 ├── parte-01.json   ← el prompt va aquí, en cada request
 ├── parte-02.json   ← y aquí
 ├── parte-03.json   ← y aquí
 ├── parte-04.json   ← y aquí
 ├── parte-05.json   ← y aquí
-├── parte-06.json   ← y aquí
+└── parte-06.json   ← y aquí
+
+clean/input/lote-2026-08-27/
 └── _MANIFEST.json  ← sólo la lista de ficheros. SE SUBE AL FINAL
 ```
+
+El manifiesto va a `clean` porque no lleva datos: sólo nombres de fichero. Eso
+permite que el submitter lo lea sin tener acceso a `raw` — y no tenerlo es
+precisamente lo que hace que robar su credencial no saque una tarjeta.
 
 **El prompt va en los seis ficheros de datos, nunca en el manifiesto.** El
 manifiesto es una señal de "ya está todo", no un contenedor.
@@ -107,7 +117,7 @@ cualquier otra cosa rechaza la petición.
 | `max_tokens` | entero positivo |
 | `system` | texto o lista de bloques `{type, text, cache_control}` |
 | `messages` | lista de `{role, content}`, con `role` = `user` o `assistant` |
-| `output_config` | estructura libre dentro de `format.schema` |
+| `output_config` | `format.type` = `json_schema` o `text`; el esquema, libre |
 | `temperature`, `top_p`, `top_k`, `stop_sequences` | opcionales |
 
 Y el `custom_id`: **sólo alfanumérico, guion y guion bajo**, máximo 64
@@ -117,6 +127,13 @@ cual, así que no metas un DNI ni un número de cuenta ahí.
 > El `custom_id` **también se escanea**. Un PAN es alfanumérico, así que sería un
 > identificador válido — y cruzaría la frontera sin que ninguna capa lo mirase si
 > no se revisara. Se revisa.
+
+> Y el **esquema de salida** también, con una vuelta de tuerca: un esquema no es
+> dato, es una instrucción. Si declara una propiedad `cvv`, le está pidiendo al
+> modelo que extraiga el CVV del documento. Por eso ahí un nombre de campo
+> prohibido **rechaza la petición** en vez de borrar el campo en silencio: borrarlo
+> cambiaría el contrato que crees tener sin decírtelo. Las descripciones, los
+> `enum` y los nombres de propiedad pasan por las capas 3-5 como cualquier texto.
 
 ---
 
@@ -168,7 +185,8 @@ se procesan en paralelo.
 
 ```bash
 LOTE=lote-2026-08-27
-RAW=s3://intelica-proxy-ia-dev-raw-891376942769/entrada/$LOTE
+RAW=s3://itl-0003-proxy-ia-dev-s3-raw-03/input/$LOTE
+CLEAN=s3://itl-0003-proxy-ia-dev-s3-clean-03/input/$LOTE
 ```
 
 ```bash
@@ -183,19 +201,26 @@ aws s3 cp . $RAW/ --recursive --exclude "*" --include "parte-*.json" --region eu
 
 ---
 
-## Paso 4 — Subir el manifiesto, al final
+## Paso 4 — Subir el manifiesto, al final y a `clean`
 
 ```bash
-aws s3 cp _MANIFEST.json $RAW/_MANIFEST.json --region eu-south-2
+aws s3 cp _MANIFEST.json $CLEAN/_MANIFEST.json --region eu-south-2
 ```
 
 **Este es el que dispara el envío.** Si lo subes antes de que el sanitizer acabe
-con alguna parte no se pierde nada: el lote queda en `esperando_partes` y el
+con alguna parte no se pierde nada: el lote queda en `awaiting_parts` y el
 barrido lo recoge cuando terminen.
 
-> No lo metas en el mismo `aws s3 cp --recursive` que las partes. El orden
-> importa poco para la corrección, pero subirlo al final es lo que hace que el
-> caso normal sea envío inmediato en vez de esperar al siguiente barrido.
+Ojo a las dos cosas que cambian respecto a las partes:
+
+- **Va a `clean`, no a `raw`.** Es el único objeto que un productor escribe en
+  `clean`, y sólo bajo `input/`.
+- **El nombre tiene que ser exactamente `_MANIFEST.json`.** `MANIFEST.json` o
+  `_MANIFEST.json.bak` no cierran nada: se quedan ahí sin disparar el envío.
+
+> No lo metas en el mismo `aws s3 cp --recursive` que las partes — ni podrías,
+> van a buckets distintos. Subirlo al final es lo que hace que el caso normal
+> sea envío inmediato en vez de esperar al siguiente barrido.
 
 ---
 
@@ -206,17 +231,17 @@ barrido lo recoge cuando terminen.
 A los pocos segundos de subir cada `.json`:
 
 ```bash
-aws s3 ls s3://intelica-proxy-ia-dev-clean-891376942769/estado/ --region eu-south-2
+aws s3 ls s3://itl-0003-proxy-ia-dev-s3-clean-03/status/ --region eu-south-2
 ```
 
 ```bash
-aws s3 cp s3://intelica-proxy-ia-dev-clean-891376942769/estado/<batch_id>.json - --region eu-south-2
+aws s3 cp s3://itl-0003-proxy-ia-dev-s3-clean-03/status/<batch_id>.json - --region eu-south-2
 ```
 
 ```json
 {
-  "estado": "limpio",
-  "peticiones": { "recibidas": 1570, "limpias": 1570, "rechazadas": 0 }
+  "status": "clean",
+  "request_counts": { "received": 1570, "clean": 1570, "rejected": 0 }
 }
 ```
 
@@ -225,32 +250,33 @@ hacer**, sin incluir nunca el valor que la disparó:
 
 ```json
 {
-  "estado": "cuarentena",
-  "motivo": "gate: 3/1570 rechazadas (0.19%) supera el umbral (1.0% o 100 absolutas)",
-  "rechazos": [
-    { "indice": 41,
-      "hallazgos": [{ "capa": 3, "tipo": "pan",
-                      "donde": "requests[41].params.messages[0].content",
-                      "detalle": "visa/16d/contiguo" }] }
+  "status": "quarantined",
+  "reason": "gate: 3/1570 rechazadas (0.19%) supera el umbral (1.0% o 100 absolutas)",
+  "rejections": [
+    { "index": 41,
+      "findings": [{ "layer": 3, "type": "pan",
+                      "where": "requests[41].params.messages[0].content",
+                      "detail": "visa/16d/contiguo" }] }
   ],
-  "que_hacer": ["Se detecto un numero de tarjeta en texto libre. Quitalo del origen: el proxy no lo enmascara, lo bloquea."]
+  "what_to_do": ["Se detecto un numero de tarjeta en texto libre. Quitalo del origen: el proxy no lo enmascara, lo bloquea."]
 }
 ```
 
 ### El estado del lote completo
 
 ```bash
-aws dynamodb get-item --table-name intelica-proxy-ia-dev-batches \
-  --key '{"batch_id":{"S":"lote#entrada/lote-2026-08-27"}}' \
+aws dynamodb get-item --table-name itl-0003-proxy-ia-dev-ddb-batches-03 \
+  --key '{"batch_id":{"S":"batch#input/lote-2026-08-27"}}' \
   --region eu-south-2
 ```
 
 | `status` | Qué significa |
 |---|---|
-| `esperando_partes` | El sanitizer sigue trabajando. El barrido lo recogerá |
-| `enviado` | Ya está en Anthropic. Mira `batch_ids` |
-| `cuarentena` | **Alguna parte fue rechazada, así que no se envió ninguna** |
-| `fallido` | Manifiesto ilegible, `custom_id` duplicado entre partes, o falta una salida limpia |
+| `awaiting_parts` | El sanitizer sigue trabajando. El barrido lo recogerá |
+| `ready` | Las partes están todas limpias; el submitter lo va a enviar |
+| `submitted` | Ya está en Anthropic. Mira `batch_ids` |
+| `quarantined` | **Alguna parte fue rechazada, así que no se envió ninguna** |
+| `failed` | Manifiesto ilegible, `custom_id` duplicado entre partes, o falta una salida limpia |
 
 ---
 
@@ -259,7 +285,7 @@ aws dynamodb get-item --table-name intelica-proxy-ia-dev-batches \
 Anthropic procesa en menos de 24 h (la mayoría en menos de una).
 
 ```bash
-aws s3 cp s3://intelica-proxy-ia-dev-results-891376942769/results/<batch_id>.jsonl . --region eu-south-2
+aws s3 cp s3://itl-0003-proxy-ia-dev-s3-results-03/results/<batch_id>.jsonl . --region eu-south-2
 ```
 
 Un JSONL: una línea por petición.
@@ -341,13 +367,13 @@ Contra el entorno real, con las suites de ejemplo:
 ningún lado y se pierde media tarde ahí.
 
 **Subí una parte y no aparece parte de estado.** Comprueba que va bajo
-`entrada/<lote>/` y que el nombre no lleva caracteres raros. Luego:
+`input/<lote>/` y que el nombre no lleva caracteres raros. Luego:
 
 ```bash
-aws logs tail /aws/lambda/intelica-proxy-ia-dev-sanitizer --since 10m --region eu-south-2
+aws logs tail /aws/lambda/itl-0003-proxy-ia-dev-lambda-sanitizer-03 --since 10m --region eu-south-2
 ```
 
-**El lote se queda en `esperando_partes`.** Falta el submitter: o los
+**El lote se queda en `awaiting_parts`.** Falta el submitter: o los
 disparadores de Terraform no están aplicados, o la regla de horario está
 desactivada. Para moverlo a mano:
 
@@ -355,6 +381,6 @@ desactivada. Para moverlo a mano:
 ./scripts/ciclo-manual.sh dev
 ```
 
-**El lote dice `fallido` con `custom_id duplicado`.** Dos partes traen el mismo
+**El lote dice `failed` con `custom_id duplicado`.** Dos partes traen el mismo
 identificador. Anthropic rechazaría el POST entero sin decir cuál, así que el
 proxy lo detecta antes y lo nombra en el estado del lote.

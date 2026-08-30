@@ -21,7 +21,7 @@ Dos modos:
     · {"texto": "..."} o texto plano          se envuelve y se numera
 
 El porcentaje sucio importa: con el gate al 1%, un 0.5% pasa y las limpias
-cruzan; un 2% aborta el lote entero. Generar los dos casos enseña la diferencia
+cruzan; un 2% aborta el lote entero. Generar los dos cases enseña la diferencia
 mejor que cualquier explicacion.
 """
 import argparse
@@ -48,17 +48,17 @@ LIMPIAS = [
 ]
 
 
-def peticion(custom_id, texto, modelo, max_tokens):
+def request(custom_id, text, modelo, max_tokens):
     return {"custom_id": custom_id,
             "params": {"model": modelo, "max_tokens": max_tokens,
-                       "messages": [{"role": "user", "content": texto}]}}
+                       "messages": [{"role": "user", "content": text}]}}
 
 
-def desde_jsonl(ruta, modelo, max_tokens):
+def desde_jsonl(path, modelo, max_tokens):
     """Convierte cada linea del JSONL en una peticion del envelope."""
-    peticiones = []
-    with open(ruta, encoding="utf-8") as fichero:
-        for numero, linea in enumerate(fichero, 1):
+    requests = []
+    with open(path, encoding="utf-8") as file_:
+        for numero, linea in enumerate(file_, 1):
             linea = linea.strip()
             if not linea:
                 continue
@@ -66,32 +66,32 @@ def desde_jsonl(ruta, modelo, max_tokens):
                 registro = json.loads(linea)
             except json.JSONDecodeError:
                 # Una linea que no es JSON se trata como texto suelto.
-                peticiones.append(peticion(f"linea-{numero}", linea, modelo, max_tokens))
+                requests.append(request(f"linea-{numero}", linea, modelo, max_tokens))
                 continue
 
             if isinstance(registro, dict) and "params" in registro:
                 # Ya viene en formato; se respeta tal cual.
                 registro.setdefault("custom_id", f"linea-{numero}")
-                peticiones.append(registro)
+                requests.append(registro)
                 continue
 
             if isinstance(registro, dict):
-                texto = (registro.get("texto") or registro.get("text")
+                text = (registro.get("texto") or registro.get("text")
                          or registro.get("content") or registro.get("prompt"))
-                if texto is None:
+                if text is None:
                     # Sin campo de texto reconocible, se serializa el registro.
-                    texto = json.dumps(registro, ensure_ascii=False)
+                    text = json.dumps(registro, ensure_ascii=False)
                 bruto = str(registro.get("id") or registro.get("custom_id")
                             or f"linea-{numero}")
             else:
-                texto, bruto = str(registro), f"linea-{numero}"
+                text, bruto = str(registro), f"linea-{numero}"
 
             # El custom_id viaja a Anthropic: tiene que ser opaco y del alfabeto
             # que acepta el envelope.
-            limpio = "".join(c if c.isalnum() or c in "-_" else "-" for c in bruto)[:64]
-            peticiones.append(peticion(limpio or f"linea-{numero}", str(texto),
+            clean_text = "".join(c if c.isalnum() or c in "-_" else "-" for c in bruto)[:64]
+            requests.append(request(clean_text or f"linea-{numero}", str(text),
                                        modelo, max_tokens))
-    return peticiones
+    return requests
 
 
 def main():
@@ -108,7 +108,7 @@ def main():
     p.add_argument("--salida", default="carga", help="carpeta destino")
     args = p.parse_args()
 
-    os.makedirs(args.salida, exist_ok=True)
+    os.makedirs(args.out, exist_ok=True)
 
     if args.desde_jsonl:
         if not os.path.isfile(args.desde_jsonl):
@@ -119,51 +119,51 @@ def main():
             print("el JSONL no tenia ninguna linea util", file=sys.stderr)
             return 2
         # Se parte en lotes del tamano pedido.
-        trozos = [todas[i:i + args.peticiones]
-                  for i in range(0, len(todas), args.peticiones)]
+        trozos = [todas[i:i + args.requests]
+                  for i in range(0, len(todas), args.requests)]
         print(f"{len(todas)} peticiones -> {len(trozos)} lote(s)")
     else:
         trozos = []
         # El determinismo importa: dos ejecuciones con los mismos argumentos dan
         # los mismos ficheros, asi que una prueba se puede repetir tal cual.
         cada_cuantas = int(100 / args.sucio) if args.sucio > 0 else 0
-        for indice in range(args.ficheros):
-            lote = []
-            for j in range(args.peticiones):
-                global_j = indice * args.peticiones + j
+        for index in range(args.files):
+            batch = []
+            for j in range(args.requests):
+                global_j = index * args.requests + j
                 if cada_cuantas and global_j % cada_cuantas == 0 and global_j > 0:
-                    texto = SUCIEDAD[global_j % len(SUCIEDAD)]
+                    text = SUCIEDAD[global_j % len(SUCIEDAD)]
                 else:
-                    texto = f"{LIMPIAS[global_j % len(LIMPIAS)]} (caso {global_j})"
-                lote.append(peticion(f"c-{indice}-{j}", texto,
+                    text = f"{LIMPIAS[global_j % len(LIMPIAS)]} (caso {global_j})"
+                batch.append(request(f"c-{index}-{j}", text,
                                      args.modelo, args.max_tokens))
-            trozos.append(lote)
+            trozos.append(batch)
 
-    for indice, lote in enumerate(trozos):
-        sucias = sum(1 for r in lote
+    for index, batch in enumerate(trozos):
+        sucias = sum(1 for r in batch
                      if any(s.split()[3] in r["params"]["messages"][0]["content"]
                             for s in SUCIEDAD[:1]))
         documento = {
-            "requests": lote,
+            "requests": batch,
             "metadata": {
-                "caso": f"carga sintetica · {len(lote)} peticiones"
+                "caso": f"carga sintetica · {len(batch)} peticiones"
                         + (f" · {args.sucio}% sucias" if args.sucio else " · todas limpias"),
                 "generado_por": "scripts/generar-lotes.py",
             },
         }
-        ruta = os.path.join(args.salida, f"carga-{indice:03d}.json")
-        with open(ruta, "w", encoding="utf-8") as fichero:
-            json.dump(documento, fichero, ensure_ascii=False)
-        tam = os.path.getsize(ruta)
-        print(f"  {os.path.basename(ruta):22} {len(lote):6} peticiones  {tam / 1024:8.1f} KB")
+        path = os.path.join(args.out, f"carga-{index:03d}.json")
+        with open(path, "w", encoding="utf-8") as file_:
+            json.dump(documento, file_, ensure_ascii=False)
+        tam = os.path.getsize(path)
+        print(f"  {os.path.basename(path):22} {len(batch):6} peticiones  {tam / 1024:8.1f} KB")
 
-    print(f"\n{len(trozos)} fichero(s) en {args.salida}/")
+    print(f"\n{len(trozos)} fichero(s) en {args.out}/")
     if args.sucio:
         veredicto = ("por DEBAJO del umbral: las limpias cruzan"
                      if args.sucio < 1.0 else
                      "por ENCIMA del umbral: el gate aborta el lote entero")
         print(f"Con {args.sucio}% sucias y el gate al 1%, {veredicto}.")
-    print(f"\nSubirlos:  ./scripts/probar-flujo.sh dev {args.salida}/*.json")
+    print(f"\nSubirlos:  ./scripts/probar-flujo.sh dev {args.out}/*.json")
     return 0
 
 

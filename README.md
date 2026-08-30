@@ -18,7 +18,7 @@ deja en otro bucket.
 
 ```bash
 make venv       # entorno virtual con las dependencias
-make pruebas    # las tres suites (99 comprobaciones)
+make pruebas    # las nueve suites (441 comprobaciones)
 make build      # artefactos reproducibles en dist/
 ```
 
@@ -48,7 +48,7 @@ incidente: *¿el código que corre es el que está en el repo?*
   │  s3 raw ─┐             │            │  s3 clean                │
   │          ▼             │            │     │                    │
   │      λ SANITIZER       │            │     ▼                    │
-  │      0 normalización   │  limpias   │  λ VERIFICADOR           │
+  │      0 normalización   │  limpias   │  λ VERIFIER              │
   │      1 envelope        │ ─────────► │  (implementación         │
   │      2 nombre campo    │            │   distinta)              │
   │      3 PAN texto libre │            │     │                    │
@@ -57,8 +57,8 @@ incidente: *¿el código que corre es el que está en el repo?*
   │          │             │            │     │                    │
   │      ◆ GATE  ──rechazo─┼─► s3       │     ▼                    │
   │          │             │  quarantine│  λ SUBMITTER ────────────┼──► Anthropic
-  │  λ CANARIO 1×/h        │            │                          │    Batch API
-  └────────────────────────┘            │  λ RECONCILIADOR ◄───────┼──  polling
+  │  λ CANARY 1×/h         │            │                          │    Batch API
+  └────────────────────────┘            │  λ RECONCILER ◄──────────┼──  polling
        CMK-raw                          │  λ FETCHER+SANITIZER ◄───┼──  results
                                         │     │                    │
                                         │     ▼  s3 results        │
@@ -71,10 +71,10 @@ de VPC. La frontera son **las claves y los roles**:
 
 | Rol | Ve CHD | Habla con Anthropic |
 |---|:---:|:---:|
-| `rol-sanitizer` | sí | **no** (Deny sobre el secreto) |
-| `rol-verificador` | sí | **no** (Deny sobre el secreto) |
-| `rol-submitter` | **no** (Deny sobre raw, quarantine y CMK-raw) | sí |
-| `rol-canario` | escribe en raw | **no** |
+| `role-sanitizer` | sí | **no** (Deny sobre el secreto) |
+| `role-verifier` | sí | **no** (Deny sobre el secreto) |
+| `role-submitter` | **no** (Deny sobre raw, quarantine y CMK-raw) | sí |
+| `role-canary` | escribe en raw | **no** |
 
 Robar cualquiera de esas credenciales no saca una tarjeta.
 
@@ -108,25 +108,25 @@ Dos reglas que el código sostiene de forma activa, no por convención:
 
 ---
 
-## Por qué el verificador usa otro algoritmo
+## Por qué el verifier usa otro algoritmo
 
-Si el verificador buscara igual que el sanitizer, fallaría en los mismos casos y su
+Si el verifier buscara igual que el sanitizer, fallaría en los mismos casos y su
 "no encontré nada" no sería evidencia de nada.
 
 - **Sanitizer**: expresiones regulares → Luhn → IIN.
-- **Verificador**: sin regex. Extrae *todos* los dígitos, tira los separadores sean
+- **Verifier**: sin regex. Extrae *todos* los dígitos, tira los separadores sean
   cuales sean, y desliza una ventana de 13 a 19 comprobando Luhn e IIN en cada posición.
 
-La prueba `tests/deteccion2_test.py` verifica que esto sirve de algo: hay seis
+La prueba `tests/detection2_test.py` verifica que esto sirve de algo: hay seis
 formas de escribir un PAN (`4111.1111.1111.1111`, separado por `/`, por `_`, por
 saltos de línea, disperso entre palabras) **ante las que el regex es ciego y la
 ventana no**. Encontrar algo aquí no es un productor malo: es un fallo del
 sanitizer, así que el objeto se borra de la zona limpia y salta la alarma crítica.
 
-## Por qué hay un canario
+## Por qué hay un canary
 
 "Macie no encontró nada" no es evidencia, porque no se distingue de "Macie no miró".
-El canario sí es falsable: cada hora planta PANes de prueba conocidos en raw y
+El canary sí es falsable: cada hora planta PANes de prueba conocidos en raw y
 comprueba que el anterior acabó en cuarentena. Si dejan de bloquearse, se sabe.
 
 Macie además dispara *después* del POST — el dato ya salió — y usa el mismo
@@ -146,7 +146,7 @@ No hay webhooks en la Batches API. Pero el polling no es el cuello de botella:
 **El límite que muerde es la cola en vuelo**, no el polling. El start tier son
 200.000 peticiones encoladas. Pasarse no devuelve un error: devuelve expiraciones
 silenciosas a las 24 h. De ahí el gate de admisión, con un contador atómico en
-DynamoDB, y la rampa gradual (`SUBMIT_MAX_POR_TICK`) porque subir de golpe dispara
+DynamoDB, y la rampa gradual (`SUBMIT_MAX_PER_TICK`) porque subir de golpe dispara
 429 aun estando dentro del RPM.
 
 ---
@@ -187,10 +187,10 @@ timeout, concurrencia y variables de entorno son de Terraform.
 
 ## Estados
 
-`recibido` → `limpio` → `verificado` → `enviado` → `terminado` → `entregado`
+`received` → `clean` → `verified` → `submitted` → `completed` → `delivered`
 
-Salidas laterales: `cuarentena` (no cruza), `retenido` (no cabe en la cola),
-`expirado` (24 h), `fallido`.
+Salidas laterales: `quarantined` (no cruza), `held` (no cabe en la cola),
+`expired` (24 h), `failed`.
 
 ## Probar el filtro
 
@@ -227,7 +227,7 @@ el sanitizer, espera el parte de estado y lo compara con el manifiesto:
 ./scripts/probar-flujo.sh dev ejemplos/04-sad
 ```
 
-Las suites `04-sad` disparan la alarma `BloqueoDuro`. Es correcto, pero avisa a
+Las suites `04-sad` disparan la alarma `HardBlock`. Es correcto, pero avisa a
 quien reciba las alarmas antes de lanzarlas.
 
 **Volumen**, para ver el gate a escala:
@@ -250,39 +250,43 @@ python3 -m venv .venv && .venv/bin/pip install -r layer/requirements.txt boto3 &
 | Fichero | Qué cubre |
 |---|---|
 | `tests/detectores_test.py` | 14 PANes de prueba de todas las marcas, 5 evasiones de codificación, SAD, base64, falsos positivos |
-| `tests/deteccion2_test.py` | Que las dos implementaciones **no** fallen en los mismos sitios |
+| `tests/detection2_test.py` | Que las dos implementaciones **no** fallen en los mismos sitios |
 | `tests/e2e_test.py` | Pipeline completo sobre S3 y DynamoDB en memoria, incluido el contador atómico de la admisión |
+| `tests/manifiesto_test.py` | El flujo de varias partes: partes en `raw`, manifiesto en `clean`, y que los dos caminos no envíen el lote dos veces |
+| `tests/nombres_test.py` | Que los nombres de recurso coincidan **exactamente** con lo desplegado, y que los seis zip se llamen como espera `publish.sh` |
+| `tests/contrato_test.py` | Estados y atributos de DynamoDB, prefijos de S3, namespaces y métricas — y que una variable de entorno retirada reviente en vez de caer al valor por defecto |
+| `tests/limpieza_test.py` | El recuento paginado de versiones, marcas de borrado y multipart del script de limpieza |
 
 ## Estructura
 
 ```
 src/common/               config, logs (sin payload), store, cliente Anthropic
 src/sanitizer/            normalize · envelope · detectors · handler (gate)
-src/verificador/          deteccion2 (ventana deslizante) · handler
+src/verifier/             detection2 (ventana deslizante) · handler
 src/submitter/            admisión + POST
-src/reconciliador/        polling adaptativo, 1 llamada por tick
+src/reconciler/           polling adaptativo, 1 llamada por tick
 src/fetcher/              stream JSONL + 2º pase de sanitización
-src/canario/              prueba de control horaria
+src/canary/               prueba de control horaria
 layer/requirements.txt    dependencias del layer
-scripts/                  build · publish · verify
-tests/                    las tres suites y los dobles de AWS
+scripts/                  build · publish · verify · lib/nombres.sh
+tests/                    las suites y los dobles de AWS
 .github/workflows/        ci.yml · deploy.yml
 docs/                     frontera con Terraform · prompt del módulo
 ```
 
 Cada Lambda se empaqueta con `src/common/` más su carpeta, todo en plano. Dos
-llevan carpetas extra porque reutilizan los detectores: `verificador` y `fetcher`.
+llevan carpetas extra porque reutilizan los detectores: `verifier` y `fetcher`.
 
 ## Alarmas
 
 | Alarma | Significa |
 |---|---|
-| `canario-no-bloqueado` | **Crítico.** El sanitizer dejó pasar PANes de prueba. |
-| `canario-no-procesado` | **Crítico.** El canario no llegó al sanitizer: la cadena está rota. |
-| `fallo-del-sanitizer` | **Crítico.** El verificador encontró PAN en la zona limpia. |
-| `pan-en-resultados` | **Crítico.** Volvió un PAN desde Anthropic. |
-| `bloqueo-duro` | Se detectó SAD. Revisar al productor. |
-| `cola-casi-llena` | Cola en vuelo >80 %. Pasarse da expiraciones silenciosas. |
+| `canary-not-blocked` | **Crítico.** El sanitizer dejó pasar PANes de prueba. |
+| `canary-not-processed` | **Crítico.** El canary no llegó al sanitizer: la cadena está rota. |
+| `sanitizer-failure` | **Crítico.** El verifier encontró PAN en la zona limpia. |
+| `pan-in-results` | **Crítico.** Volvió un PAN desde Anthropic. |
+| `hard-block` | Se detectó SAD. Revisar al productor. |
+| `queue-almost-full` | Cola en vuelo >80 %. Pasarse da expiraciones silenciosas. |
 
 ## Documentación
 

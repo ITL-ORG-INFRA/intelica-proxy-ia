@@ -16,7 +16,7 @@ import unicodedata
 from typing import List, Tuple
 
 #: invisibles: separan digitos sin dejar rastro visible
-_INVISIBLES = dict.fromkeys([
+_INVISIBLE = dict.fromkeys([
     0x00AD,  # soft hyphen
     0x200B, 0x200C, 0x200D,  # zero width space / non-joiner / joiner
     0x2060, 0x2061, 0x2062, 0x2063, 0x2064,  # word joiner e invisibles matematicos
@@ -31,7 +31,7 @@ _BIDI = dict.fromkeys([
     0x2066, 0x2067, 0x2068, 0x2069,
 ])
 
-_STRIP = {**_INVISIBLES, **_BIDI}
+_STRIP = {**_INVISIBLE, **_BIDI}
 
 #: separadores exoticos que hacen de guion o espacio entre grupos de digitos
 _SEPARATORS = {

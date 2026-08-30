@@ -45,17 +45,17 @@ mkdir -p "$DIST"
 # Array indexado y un case, en vez de array asociativo: macOS trae bash 3.2 y
 # ahi 'declare -A' no existe. El script tiene que correr igual en el portatil de
 # quien lo usa que en el runner de CI.
-FUNCIONES=(canario fetcher reconciliador sanitizer submitter verificador)
+FUNCIONES=(canary fetcher reconciler sanitizer submitter verifier)
 
-# verificador y fetcher reutilizan los detectores del sanitizer.
+# verifier y fetcher reutilizan los detectores del sanitizer.
 carpetas_de() {
   case "$1" in
-    canario)       echo "common canario" ;;
+    canary)       echo "common canary" ;;
     fetcher)       echo "common sanitizer fetcher" ;;
-    reconciliador) echo "common reconciliador" ;;
+    reconciler) echo "common reconciler" ;;
     sanitizer)     echo "common sanitizer" ;;
     submitter)     echo "common submitter" ;;
-    verificador)   echo "common sanitizer verificador" ;;
+    verifier)   echo "common sanitizer verifier" ;;
     *) die "funcion desconocida: $1" ;;
   esac
 }

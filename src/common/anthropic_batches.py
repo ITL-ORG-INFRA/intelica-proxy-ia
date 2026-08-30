@@ -6,7 +6,7 @@ Dos cosas que no son evidentes y que este modulo se toma en serio:
    retry-after son la unica forma de saber cuanto margen queda; sin ellas solo
    se puede reaccionar al 429, que es tarde.
 
-2. El reconciliador pide max_retries=0. Reintentar dentro de la Lambda cuando
+2. El reconciler pide max_retries=0. Reintentar dentro de la Lambda cuando
    ya vas justo de limite es echar gasolina: es mejor fallar el tick y que el
    siguiente, ya frenado, lo recoja.
 """
@@ -34,34 +34,34 @@ def client(max_retries: int = 2) -> anthropic.Anthropic:
 
 
 class AnthropicError(Exception):
-    def __init__(self, mensaje: str, status: int = 502, codigo: str = "upstream_error",
+    def __init__(self, message: str, status: int = 502, code: str = "upstream_error",
                  retry_after: Optional[float] = None):
-        super().__init__(mensaje)
-        self.mensaje = mensaje
+        super().__init__(message)
+        self.message = message
         self.status = status
-        self.codigo = codigo
+        self.code = code
         self.retry_after = retry_after
 
 
-def _traducir(exc: Exception) -> AnthropicError:
+def _translate(exc: Exception) -> AnthropicError:
     if isinstance(exc, anthropic.APIStatusError):
         status = exc.status_code
-        cabeceras = getattr(getattr(exc, "response", None), "headers", {}) or {}
-        espera = cabeceras.get("retry-after")
+        headers = getattr(getattr(exc, "response", None), "headers", {}) or {}
+        wait = headers.get("retry-after")
         try:
-            espera = float(espera) if espera else None
+            wait = float(wait) if wait else None
         except (TypeError, ValueError):
-            espera = None
+            wait = None
         if status in (401, 403):
             # Es NUESTRA credencial la que falla, no la del que pidio el lote.
             return AnthropicError("el proxy no pudo autenticarse contra Anthropic",
                                   502, "upstream_auth_error")
         if status == 429:
             return AnthropicError("Anthropic esta limitando el trafico", 429,
-                                  "rate_limited", espera)
+                                  "rate_limited", wait)
         if 400 <= status < 500:
             return AnthropicError(str(exc)[:500], 400, "invalid_upstream_request")
-        return AnthropicError(str(exc)[:500], 502, "upstream_error", espera)
+        return AnthropicError(str(exc)[:500], 502, "upstream_error", wait)
     if isinstance(exc, anthropic.APITimeoutError):
         return AnthropicError("Anthropic no respondio a tiempo", 504, "upstream_timeout")
     if isinstance(exc, anthropic.APIConnectionError):
@@ -69,24 +69,24 @@ def _traducir(exc: Exception) -> AnthropicError:
     return AnthropicError(str(exc)[:500], 502, "upstream_error")
 
 
-def _cabeceras(respuesta: Any) -> Dict[str, str]:
-    crudas = getattr(respuesta, "headers", {}) or {}
+def _headers(response: Any) -> Dict[str, str]:
+    crudas = getattr(response, "headers", {}) or {}
     try:
         return {k.lower(): v for k, v in crudas.items()}
     except AttributeError:
         return {}
 
 
-def crear_lote(requests: List[Dict[str, Any]]) -> Tuple[Dict[str, Any], Dict[str, str]]:
+def create_batch(requests: List[Dict[str, Any]]) -> Tuple[Dict[str, Any], Dict[str, str]]:
     """Crea el lote. Devuelve (lote, cabeceras)."""
     try:
         crudo = client().messages.batches.with_raw_response.create(requests=requests)
     except Exception as exc:  # noqa: BLE001
-        raise _traducir(exc) from exc
-    return crudo.parse().model_dump(mode="json"), _cabeceras(crudo)
+        raise _translate(exc) from exc
+    return crudo.parse().model_dump(mode="json"), _headers(crudo)
 
 
-def listar_lotes(limit: int = 100, after_id: Optional[str] = None
+def list_batches(limit: int = 100, after_id: Optional[str] = None
                  ) -> Tuple[List[Dict[str, Any]], bool, Dict[str, str]]:
     """UNA llamada devuelve el estado de hasta 100 lotes.
 
@@ -99,30 +99,30 @@ def listar_lotes(limit: int = 100, after_id: Optional[str] = None
     try:
         crudo = client(max_retries=0).messages.batches.with_raw_response.list(**parametros)
     except Exception as exc:  # noqa: BLE001
-        raise _traducir(exc) from exc
+        raise _translate(exc) from exc
     pagina = crudo.parse()
-    lotes = [b.model_dump(mode="json") for b in pagina.data]
-    return lotes, bool(getattr(pagina, "has_more", False)), _cabeceras(crudo)
+    batches = [b.model_dump(mode="json") for b in pagina.data]
+    return batches, bool(getattr(pagina, "has_more", False)), _headers(crudo)
 
 
-def recuperar_lote(batch_id: str) -> Dict[str, Any]:
+def recover_batch(batch_id: str) -> Dict[str, Any]:
     try:
         return client().messages.batches.retrieve(batch_id).model_dump(mode="json")
     except Exception as exc:  # noqa: BLE001
-        raise _traducir(exc) from exc
+        raise _translate(exc) from exc
 
 
-def cancelar_lote(batch_id: str) -> Dict[str, Any]:
+def cancel_batch(batch_id: str) -> Dict[str, Any]:
     try:
         return client().messages.batches.cancel(batch_id).model_dump(mode="json")
     except Exception as exc:  # noqa: BLE001
-        raise _traducir(exc) from exc
+        raise _translate(exc) from exc
 
 
-def stream_resultados(batch_id: str) -> Iterable[Dict[str, Any]]:
+def stream_results(batch_id: str) -> Iterable[Dict[str, Any]]:
     """Itera los resultados uno a uno, sin materializar el JSONL entero."""
     try:
-        for entrada in client().messages.batches.results(batch_id):
-            yield entrada.model_dump(mode="json")
+        for entry in client().messages.batches.results(batch_id):
+            yield entry.model_dump(mode="json")
     except Exception as exc:  # noqa: BLE001
-        raise _traducir(exc) from exc
+        raise _translate(exc) from exc
