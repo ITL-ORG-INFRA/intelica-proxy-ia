@@ -11,7 +11,7 @@ infraestructura.
 
 ## Qué cambia y por qué
 
-Hoy el reconciliador y el fetcher se despiertan cada 5 minutos aunque no haya
+Hoy el reconciler y el fetcher se despiertan cada 5 minutos aunque no haya
 nada que hacer. El coste es despreciable, así que el cambio **no es por ahorro**:
 es por latencia —hasta 10 minutos entre que Anthropic acaba y el resultado
 aparece en S3— y para que «hay trabajo pendiente» sea algo observable en vez de
@@ -50,7 +50,7 @@ Cuando no hay lotes en vuelo la cola está vacía y **no se invoca nada**.
 - `redrive_policy` en la cola principal con `maxReceiveCount = 5`
 - `message_retention_seconds`: 14 días
 
-**Event source mapping** SQS → Lambda `${prefijo}-reconciliador`
+**Event source mapping** SQS → Lambda `${nombre}-lambda-reconciler-03`
 
 - `batch_size`: 10
 - `maximum_batching_window_in_seconds`: 0 — que no espere a juntar mensajes
@@ -68,7 +68,7 @@ del que nadie va a recoger los resultados**. Es de las alarmas más importantes
 del sistema.
 
 **Regla de horario nueva** `${prefijo}-barrido` con `rate(1 hour)` → Lambda
-`${prefijo}-reconciliador`
+`${nombre}-lambda-reconciler-03`
 
 Es la red de seguridad: busca lotes en vuelo que lleven demasiado tiempo sin
 consultarse, o sea, aquellos cuyo mensaje se perdió. Convierte «se perdió un
@@ -80,14 +80,14 @@ fallo es silencioso.
 
 | Recurso | Por qué |
 |---|---|
-| Regla `${prefijo}-reconciliador` `rate(5 minutes)` | La sustituye la cola |
+| Regla `${nombre}-lambda-reconciler-03` `rate(5 minutes)` | La sustituye la cola |
 | Regla `${prefijo}-fetcher` `rate(5 minutes)` | Lo invoca el supervisor |
 
 **Saldo neto: dos reglas menos, una cola, una DLQ y una regla horaria.**
 
 ## Permisos
 
-Las tres Lambdas de la zona limpia (submitter, reconciliador, fetcher) comparten
+Las tres Lambdas de la zona limpia (submitter, reconciler, fetcher) comparten
 `${prefijo}-rol-submitter`, así que sólo cambia ese rol:
 
 ```hcl
@@ -154,5 +154,5 @@ aws sqs get-queue-attributes --queue-url <url> --region eu-south-2 \
 `maxReceiveCount: 5`.
 
 Y tras subir un lote de prueba, la cola debe vaciarse sola cuando el lote llegue
-a `entregado`. Si quedan mensajes dando vueltas, el supervisor no los está
+a `delivered`. Si quedan mensajes dando vueltas, el supervisor no los está
 borrando y acabarán en la DLQ.

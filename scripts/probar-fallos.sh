@@ -21,10 +21,13 @@
 # ---------------------------------------------------------------------------
 set -Eeuo pipefail
 
+RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=scripts/lib/nombres.sh
+source "${RAIZ}/scripts/lib/nombres.sh"
+
 ENTORNO="${1:-}"
 SOLO="${2:-}"
 
-PROYECTO="${PROYECTO:-intelica-proxy-ia}"
 REGION="${AWS_REGION:-eu-south-2}"
 ESPERA="${ESPERA:-70}"
 ESPERA_LARGA="${ESPERA_LARGA:-360}"
@@ -51,24 +54,28 @@ AWS=(aws --region "$REGION" --output json)
 CUENTA="$("${AWS[@]}" sts get-caller-identity | jq -r .Account)" \
   || die "credenciales AWS invalidas o expiradas"
 
-P="${PROYECTO}-${ENTORNO}"
-RAW="${P}-raw-${CUENTA}"
-CLEAN="${P}-clean-${CUENTA}"
-TABLA="${P}-batches"
+RAW="$(itl_bucket "$ENTORNO" raw)"
+CLEAN="$(itl_bucket "$ENTORNO" clean)"
+TABLA="$(itl_table "$ENTORNO")"
+LOG_SUBMITTER="$(itl_log_group "$ENTORNO" submitter)"
 SELLO="$(date +%Y%m%d-%H%M%S)"
+
+#: las partes viven en raw, bajo input/. El manifiesto NO: va a clean.
+lote_de() { printf '%sfallos/%s/%s' "$ITL_PREFIX_INPUT" "$SELLO" "$1"; }
 
 OK=0; FALLOS=0; OMITIDOS=0
 
 printf '%s==>%s %sDestino%s\n' "$AZUL" "$R" "$B" "$R"
 dato "cuenta ${CUENTA} · region ${REGION} · entorno ${ENTORNO}"
-dato "prefijo de esta tanda: fallos/${SELLO}"
+dato "prefijo de esta tanda: $(lote_de '')"
 printf '\n    %sOJO:%s varios cases disparan la alarma BatchesQuarantined.\n' "$AMBAR" "$R"
 printf '    Es correcto, pero avisa a quien reciba las alarmas.\n'
 
 # --- utilidades -------------------------------------------------------------
 
-subir() {  # subir <clave-relativa> <fichero-o-'-'>
-  local clave="fallos/${SELLO}/$1"
+subir() {  # subir <clave-relativa> <fichero-o-'-'>   una parte, a raw
+  local clave
+  clave="$(lote_de "$1")"
   if [[ "$2" == "-" ]]; then
     "${AWS[@]}" s3api put-object --bucket "$RAW" --key "$clave" \
       --body /dev/stdin >/dev/null
@@ -76,6 +83,14 @@ subir() {  # subir <clave-relativa> <fichero-o-'-'>
     "${AWS[@]}" s3api put-object --bucket "$RAW" --key "$clave" \
       --body "$2" >/dev/null
   fi
+  echo "$clave"
+}
+
+subir_manifiesto() {  # subir_manifiesto <carpeta-relativa>   desde stdin, a clean
+  local clave
+  clave="$(lote_de "$1/${ITL_MANIFEST_SUFFIX}")"
+  "${AWS[@]}" s3api put-object --bucket "$CLEAN" --key "$clave" \
+    --body /dev/stdin --content-type application/json >/dev/null
   echo "$clave"
 }
 
@@ -94,7 +109,7 @@ esperar_parte() {  # esperar_parte <batch_id> [segundos]
   local lote="$1" limite="${2:-$ESPERA}" parte=""
   printf '    %sesperando%s' "$D" "$R"
   for _ in $(seq 1 "$limite"); do
-    if parte="$("${AWS[@]}" s3 cp "s3://${CLEAN}/status/${lote}.json" - 2>/dev/null)"; then
+    if parte="$("${AWS[@]}" s3 cp "s3://${CLEAN}/${ITL_PREFIX_STATUS}${lote}.json" - 2>/dev/null)"; then
       [[ -n "$parte" ]] && { printf '\n'; echo "$parte"; return 0; }
     fi
     printf '.'; sleep 1
@@ -174,11 +189,11 @@ fi
 # ===========================================================================
 if quiere_caso 3; then
   caso "3 · manifiesto ilegible"
-  dato "esperado: el lote queda FALLIDO, no revienta la Lambda"
-  carpeta="fallos/${SELLO}/caso3"
+  dato "esperado: el lote queda failed, no revienta la Lambda"
+  carpeta="$(lote_de "caso3")"
   peticion_json "c3-1" "Resume el expediente" | subir "caso3/parte-01.json" - >/dev/null
-  printf '{no es json' | subir "caso3/_MANIFEST.json" - >/dev/null
-  if item="$(esperar_lote "$carpeta" "fallido" 40)"; then
+  printf '{no es json' | subir_manifiesto "caso3" >/dev/null
+  if item="$(esperar_lote "$carpeta" "failed" 40)"; then
     bien "lote marcado fallido"
     dato "motivo: $(jq -r '.Item.reason.S // "-"' <<<"$item")"
   else
@@ -191,13 +206,13 @@ fi
 # ===========================================================================
 if quiere_caso 4; then
   caso "4 · manifiesto antes de que el sanitizer acabe"
-  dato "esperado: esperando_partes, y el barrido lo envia despues"
-  carpeta="fallos/${SELLO}/caso4"
-  jq -nc '{lote:"caso4", files:["parte-01.json","parte-02.json"], total_requests:2}' \
-    | subir "caso4/_MANIFEST.json" - >/dev/null
+  dato "esperado: awaiting_parts, y el barrido lo envia despues"
+  carpeta="$(lote_de "caso4")"
+  jq -nc '{batch:"caso4", files:["parte-01.json","parte-02.json"], total_requests:2}' \
+    | subir_manifiesto "caso4" >/dev/null
 
-  if item="$(esperar_lote "$carpeta" "esperando_partes" 30)"; then
-    bien "queda esperando_partes"
+  if item="$(esperar_lote "$carpeta" "awaiting_parts" 30)"; then
+    bien "queda awaiting_parts"
     dato "limpias=$(jq -r '.Item.clean_parts.N // 0' <<<"$item")/$(jq -r '.Item.expected_parts.N // 0' <<<"$item")"
   else
     mal "estado=$(jq -r '.Item.status.S // "sin item"' <<<"$item")"
@@ -208,12 +223,12 @@ if quiere_caso 4; then
   peticion_json "c4-2" "Extrae la fecha"       | subir "caso4/parte-02.json" - >/dev/null
 
   dato "el barrido corre cada 5 min; esto puede tardar"
-  if item="$(esperar_lote "$carpeta" "enviado" "$ESPERA_LARGA")"; then
+  if item="$(esperar_lote "$carpeta" "submitted" "$ESPERA_LARGA")"; then
     bien "el barrido lo recogio y lo envio"
     dato "batch_ids: $(jq -r '[.Item.batch_ids.L[]?.S] | join(", ")' <<<"$item")"
   else
     estado="$(jq -r '.Item.status.S // "sin item"' <<<"$item")"
-    if [[ "$estado" == "esperando_partes" ]]; then
+    if [[ "$estado" == "awaiting_parts" ]]; then
       printf '    %s?%s sigue esperando tras %ss\n' "$AMBAR" "$R" "$ESPERA_LARGA"
       dato "si la regla de horario del submitter esta desactivada, es lo esperado"
       dato "muevelo a mano:  ./scripts/ciclo-manual.sh ${ENTORNO} submitter"
@@ -230,14 +245,14 @@ fi
 if quiere_caso 5; then
   caso "5 · una parte sucia: NO se envia ninguna parte"
   dato "esperado: lote en cuarentena aunque la otra parte este limpia"
-  carpeta="fallos/${SELLO}/caso5"
+  carpeta="$(lote_de "caso5")"
   peticion_json "c5-ok"  "Resume el expediente sin incidencias" \
     | subir "caso5/parte-01.json" - >/dev/null
   peticion_json "c5-mal" "El cliente pago con la 4111111111111111" \
     | subir "caso5/parte-02.json" - >/dev/null
   sleep 8
-  jq -nc '{lote:"caso5", files:["parte-01.json","parte-02.json"], total_requests:2}' \
-    | subir "caso5/_MANIFEST.json" - >/dev/null
+  jq -nc '{batch:"caso5", files:["parte-01.json","parte-02.json"], total_requests:2}' \
+    | subir_manifiesto "caso5" >/dev/null
 
   if item="$(esperar_lote "$carpeta" "quarantined" 60)"; then
     bien "lote en cuarentena"
@@ -256,25 +271,25 @@ fi
 # ===========================================================================
 if quiere_caso 6; then
   caso "6 · custom_id duplicado entre partes"
-  dato "esperado: lote FALLIDO nombrando el id, sin POST a Anthropic"
-  carpeta="fallos/${SELLO}/caso6"
+  dato "esperado: lote failed nombrando el id, sin POST a Anthropic"
+  carpeta="$(lote_de "caso6")"
   peticion_json "colision" "Primera aparicion del id" \
     | subir "caso6/parte-01.json" - >/dev/null
   peticion_json "colision" "Segunda aparicion del MISMO id" \
     | subir "caso6/parte-02.json" - >/dev/null
   sleep 8
-  jq -nc '{lote:"caso6", files:["parte-01.json","parte-02.json"], total_requests:2}' \
-    | subir "caso6/_MANIFEST.json" - >/dev/null
+  jq -nc '{batch:"caso6", files:["parte-01.json","parte-02.json"], total_requests:2}' \
+    | subir_manifiesto "caso6" >/dev/null
 
-  if item="$(esperar_lote "$carpeta" "fallido" 60)"; then
-    bien "lote fallido"
+  if item="$(esperar_lote "$carpeta" "failed" 60)"; then
+    bien "lote failed"
     motivo="$(jq -r '.Item.reason.S // "-"' <<<"$item")"
     [[ "$motivo" == *"colision"* ]] \
       && bien "nombra el id duplicado: ${motivo}" \
       || mal "el motivo no dice cual: ${motivo}"
   else
     estado="$(jq -r '.Item.status.S // "sin item"' <<<"$item")"
-    if [[ "$estado" == "esperando_partes" || "$estado" == "listo" ]]; then
+    if [[ "$estado" == "awaiting_parts" || "$estado" == "ready" ]]; then
       printf '    %s?%s sigue en %s tras 60s\n' "$AMBAR" "$R" "$estado"
       dato "el fallo se detecta al ensamblar; muevelo:  ./scripts/ciclo-manual.sh ${ENTORNO} submitter"
       OMITIDOS=$((OMITIDOS + 1))
@@ -303,12 +318,13 @@ cat <<AYUDA
 
     ${B}Para limpiar lo que dejo esta tanda${R}
 
-      aws s3 rm s3://${RAW}/fallos/${SELLO}/ --recursive --region ${REGION}
+      aws s3 rm s3://${RAW}/$(lote_de '') --recursive --region ${REGION}
+      aws s3 rm s3://${CLEAN}/$(lote_de '') --recursive --region ${REGION}
 
     ${B}Si algo quedo sin concluir${R}
 
       ./scripts/ciclo-manual.sh ${ENTORNO} submitter
-      aws logs tail /aws/lambda/${P}-submitter --since 10m --region ${REGION}
+      aws logs tail ${LOG_SUBMITTER} --since 10m --region ${REGION}
 
 AYUDA
 

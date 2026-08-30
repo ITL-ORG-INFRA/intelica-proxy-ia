@@ -44,20 +44,63 @@ Reglas que conviene saber antes, porque el proxy es **estricto a propósito**:
 
 ## 2. Subirlo
 
+Un lote de un solo fichero va entero a `raw`, bajo `input/`:
+
 ```bash
-aws s3 cp lote.json s3://intelica-proxy-ia-dev-raw-<cuenta>/input/lote.json --region eu-south-2
+aws s3 cp lote.json s3://itl-0003-proxy-ia-dev-s3-raw-03/input/lote.json --region eu-south-2
 ```
 
 Y ya está. No hay que llamar a ninguna API ni avisar a nadie: dejar el fichero
 dispara todo el proceso.
+
+### Si el lote son varios ficheros
+
+Entonces hacen falta **dos buckets distintos**, y el orden importa:
+
+| Qué | Dónde | Cuándo |
+|---|---|---|
+| Las partes | `s3://itl-0003-proxy-ia-dev-s3-raw-03/input/<lote>/parte-NN.json` | primero |
+| El manifiesto | `s3://itl-0003-proxy-ia-dev-s3-clean-03/input/<lote>/_MANIFEST.json` | **al final** |
+
+El manifiesto es la señal de «ya está todo»: hasta que llega, nadie sabe
+cuántas partes tiene el lote. Por eso va el último — subirlo antes no rompe
+nada, pero el lote se queda esperando al siguiente barrido en vez de enviarse
+en el acto.
+
+Va a `clean` y no a `raw` porque **no lleva datos**: sólo la lista de ficheros
+que componen el lote. Dejarlo fuera del entorno protegido es lo que permite que
+el submitter —que no puede leer `raw`, y no debe— lo lea por sí mismo.
+
+El nombre tiene que ser **exactamente** `_MANIFEST.json`. Ni `MANIFEST.json`, ni
+`_MANIFEST.json.bak`: nada más cierra un lote.
+
+```json
+{
+  "batch": "lote-agosto",
+  "files": ["parte-01.json", "parte-02.json"],
+  "total_requests": 4000
+}
+```
+
+La lista `files` tiene que coincidir **exactamente** con lo que subiste. Si
+sobra un nombre, el lote espera una parte que no va a llegar; si falta uno, se
+envía incompleto sin que nadie lo note. Ninguno de los dos errores da un
+mensaje claro, así que mejor generarlo desde lo que hay en la carpeta —que es
+lo que hace `./scripts/subir-lote.sh`.
+
+> **Lo único que puedes escribir en `clean` es el manifiesto, bajo `input/`.**
+> El resto de `clean` lo escribe el proxy: `clean/` son los lotes ya
+> sanitizados y `status/` los partes de estado. Escribir datos ahí a mano
+> saltaría el filtro entero, que es justo lo que este sistema existe para
+> impedir.
 
 ## 3. Ver qué pasó con tu lote
 
 A los pocos segundos aparece un **parte de estado**:
 
 ```bash
-aws s3 ls s3://intelica-proxy-ia-dev-clean-<cuenta>/status/ --region eu-south-2
-aws s3 cp s3://intelica-proxy-ia-dev-clean-<cuenta>/status/<batch_id>.json - --region eu-south-2
+aws s3 ls s3://itl-0003-proxy-ia-dev-s3-clean-03/status/ --region eu-south-2
+aws s3 cp s3://itl-0003-proxy-ia-dev-s3-clean-03/status/<batch_id>.json - --region eu-south-2
 ```
 
 Si todo fue bien:
@@ -99,7 +142,7 @@ Anthropic procesa el lote en menos de 24 horas (la mayoría acaba en menos de
 una). Cuando termina, los resultados aparecen solos:
 
 ```bash
-aws s3 cp s3://intelica-proxy-ia-dev-results-<cuenta>/results/<batch_id>.jsonl . --region eu-south-2
+aws s3 cp s3://itl-0003-proxy-ia-dev-s3-results-03/results/<batch_id>.jsonl . --region eu-south-2
 ```
 
 Es un JSONL: una línea por petición, con el `custom_id` que tú pusiste.
@@ -163,10 +206,16 @@ Pídeselos a infraestructura. Son estos y sólo estos:
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "DejarLotes",
+      "Sid": "DejarLasPartes",
       "Effect": "Allow",
       "Action": "s3:PutObject",
-      "Resource": "arn:aws:s3:::intelica-proxy-ia-dev-raw-<cuenta>/input/*"
+      "Resource": "arn:aws:s3:::itl-0003-proxy-ia-dev-s3-raw-03/input/*"
+    },
+    {
+      "Sid": "CerrarElLoteConElManifiesto",
+      "Effect": "Allow",
+      "Action": "s3:PutObject",
+      "Resource": "arn:aws:s3:::itl-0003-proxy-ia-dev-s3-clean-03/input/*"
     },
     {
       "Sid": "CifrarAlSubir",
@@ -179,10 +228,10 @@ Pídeselos a infraestructura. Son estos y sólo estos:
       "Effect": "Allow",
       "Action": ["s3:GetObject", "s3:ListBucket"],
       "Resource": [
-        "arn:aws:s3:::intelica-proxy-ia-dev-clean-<cuenta>",
-        "arn:aws:s3:::intelica-proxy-ia-dev-clean-<cuenta>/status/*",
-        "arn:aws:s3:::intelica-proxy-ia-dev-results-<cuenta>",
-        "arn:aws:s3:::intelica-proxy-ia-dev-results-<cuenta>/*"
+        "arn:aws:s3:::itl-0003-proxy-ia-dev-s3-clean-03",
+        "arn:aws:s3:::itl-0003-proxy-ia-dev-s3-clean-03/status/*",
+        "arn:aws:s3:::itl-0003-proxy-ia-dev-s3-results-03",
+        "arn:aws:s3:::itl-0003-proxy-ia-dev-s3-results-03/*"
       ]
     },
     {
@@ -195,7 +244,7 @@ Pídeselos a infraestructura. Son estos y sólo estos:
 }
 ```
 
-Dos cosas que **no** incluye, y no es un olvido:
+Tres cosas que **no** incluye, y ninguna es un olvido:
 
 - **No puedes releer lo que subiste.** El bucket `raw` es de sólo escritura para
   ti. Lo que subes puede contener datos de tarjeta —de eso va todo esto—, y una
@@ -204,6 +253,11 @@ Dos cosas que **no** incluye, y no es un olvido:
 - **No tienes `kms:Decrypt` sobre la clave del entorno protegido.** Sólo sobre la
   de la zona limpia. Es lo que mantiene tu identidad fuera del alcance de la
   auditoría PCI, que te conviene a ti tanto como a nosotros.
+- **En `clean` sólo puedes escribir bajo `input/`,** que es donde va el
+  manifiesto. No hay `PutObject` sobre `clean/*` ni sobre `status/*`: ahí
+  escribe el proxy. Si pudieras dejar datos directamente en `clean/`, estarías
+  metiendo en la zona limpia algo que no ha pasado por el filtro — y el
+  submitter lo enviaría a Anthropic sin mirarlo.
 
 ## Si algo no funciona
 
@@ -214,6 +268,19 @@ falta `kms:GenerateDataKey`. El error no menciona KMS por ninguna parte.
 llevar caracteres raros y tiene que ir bajo `input/`. Si persiste, avisa a
 infraestructura: puede que el disparador esté caído.
 
-**El parte dice `cuarentena` y no entiendo por qué.** Mira `rechazos[].hallazgos`
-y `que_hacer`. Si el motivo es `envelope invalido`, es el esquema; si es una capa
+**Subí el manifiesto y el lote no se envía.** Comprueba tres cosas: que está en
+el bucket `clean` (no en `raw`), que la carpeta del lote es la misma en los dos
+buckets (`input/<lote>/`), y que se llama exactamente `_MANIFEST.json`. El
+estado del lote lo dice:
+
+```bash
+aws dynamodb get-item --table-name itl-0003-proxy-ia-dev-ddb-batches-03 \
+  --key '{"batch_id":{"S":"batch#input/<lote>"}}' --region eu-south-2
+```
+
+`awaiting_parts` = alguna parte sigue en el sanitizer · `quarantined` = alguna
+parte fue rechazada y no se envía ninguna · `submitted` = ya está en Anthropic.
+
+**El parte dice `quarantined` y no entiendo por qué.** Mira `rejections[].findings`
+y `what_to_do`. Si el motivo es `envelope invalido`, es el esquema; si es una capa
 3, 4 o 5, es contenido.

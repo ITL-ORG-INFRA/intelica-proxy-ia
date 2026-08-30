@@ -24,14 +24,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r layer/requirements.txt boto3
 
-      - name: Detectores PCI
-        run: python tests/detectores_test.py
-
-      - name: Independencia de las dos implementaciones
-        run: python tests/deteccion2_test.py
-
-      - name: Pipeline de extremo a extremo
-        run: python tests/e2e_test.py
+      # Se corre la suite entera con el mismo lanzador que en local. Antes se
+      # enumeraban tres ficheros a mano y uno de ellos ya no existia con ese
+      # nombre: el paso fallaba por "no such file", no por una prueba en rojo.
+      - name: Todas las pruebas
+        run: PYTHON=python ./tests/run.sh
 
   scripts:
     name: Scripts de shell
@@ -41,7 +38,7 @@ jobs:
       - name: shellcheck
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
-          shellcheck --severity=warning scripts/*.sh
+          shellcheck --severity=warning scripts/*.sh scripts/lib/*.sh tests/run.sh
 
   construccion:
     name: La construccion es reproducible
@@ -67,3 +64,14 @@ jobs:
             exit 1
           fi
           echo "los 6 artefactos son identicos entre construcciones"
+
+      # Los nombres de los zip son contrato con publish.sh: publica
+      # dist/<funcion>.zip en la Lambda que le corresponde. Si build.sh deja
+      # otro nombre, publish.sh muere con "falta dist/x.zip" en pleno
+      # despliegue, no aqui.
+      - name: Los seis artefactos se llaman como espera publish.sh
+        run: |
+          for z in sanitizer submitter reconciler fetcher verifier canary; do
+            test -f "dist/${z}.zip" || { echo "::error::falta dist/${z}.zip"; exit 1; }
+          done
+          echo "los seis zip estan y se llaman bien"

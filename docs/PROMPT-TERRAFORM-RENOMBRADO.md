@@ -54,53 +54,54 @@ itl-0003-portal-dev-lambda-sync-buk-absence-03
 
 Es decir: `itl-<NNNN>-<app>-<entorno>-<tipo>-<descriptor>-<NN>`.
 
-### Dos cosas que hay que confirmar antes de escribir nada
+### Los dos datos que faltaban, ya resueltos
 
-De ese ejemplo sólo se deduce con certeza el token de tipo `lambda`. Lo demás
-hay que sacarlo de la cuenta, no inventarlo:
+Este documento se escribió con dos incógnitas —el código numérico del proyecto y
+los tokens de tipo de cada recurso— porque salían de la cuenta y no de aquí. Ya
+están resueltas y **la infraestructura está desplegada** con estos valores:
 
-1. **El código numérico `<NNNN>` de este proyecto.** El `0003` del ejemplo es de
-   `portal`. Averigua cuál corresponde a proxy-ia, o si hay que pedir uno nuevo,
-   antes de aplicar. **No reutilices el 0003.**
-2. **Los tokens de tipo de los demás recursos.** Abajo van los que parecen
-   naturales, pero contrástalos con lo que ya existe en la cuenta:
+```
+Cuenta:      891376942769        Asset ID:  0003
+Región:      eu-south-2          Secuencia: 03
+Aplicación:  proxy-ia            Entorno:   dev
+```
 
-   ```bash
-   aws resourcegroupstaggingapi get-resources --region eu-south-2 \
-     --query 'ResourceTagMappingList[].ResourceARN' --output text \
-     | grep -o 'itl-[0-9]*-[a-z-]*' | sort -u | head -40
-   ```
+El asset id resultó ser `0003` igualmente, y los tokens de tipo son `lambda`,
+`s3`, `ddb`, `kms`, `sns`, `evb` y `role`. **`role`, no `iam`**, que es lo que
+proponía la versión anterior de esta tabla.
 
-   Si en la cuenta los buckets se llaman `-s3-` úsalo; si se llaman `-buk-`,
-   ése. **El criterio es lo que ya hay, no lo que propone este documento.**
+### Nombres definitivos
 
-### Nombres propuestos
-
-Con `<N>` = el código numérico y `proxy-ia` como aplicación. Los tokens de tipo
-marcados con `?` son los que hay que confirmar.
-
-| Recurso | Nombre propuesto | Tipo |
+| Recurso | Nombre | Tipo |
 |---|---|---|
-| Lambda sanitizer | `itl-<N>-proxy-ia-dev-lambda-sanitizer-01` | confirmado |
-| Lambda submitter | `itl-<N>-proxy-ia-dev-lambda-submitter-01` | confirmado |
-| Lambda reconciler | `itl-<N>-proxy-ia-dev-lambda-reconciler-01` | confirmado |
-| Lambda fetcher | `itl-<N>-proxy-ia-dev-lambda-fetcher-01` | confirmado |
-| Lambda verifier | `itl-<N>-proxy-ia-dev-lambda-verifier-01` | confirmado |
-| Lambda canary | `itl-<N>-proxy-ia-dev-lambda-canary-01` | confirmado |
-| Bucket raw | `itl-<N>-proxy-ia-dev-s3-raw-01` | `s3` ? |
-| Bucket clean | `itl-<N>-proxy-ia-dev-s3-clean-01` | `s3` ? |
-| Bucket quarantine | `itl-<N>-proxy-ia-dev-s3-quarantine-01` | `s3` ? |
-| Bucket results | `itl-<N>-proxy-ia-dev-s3-results-01` | `s3` ? |
-| Tabla DynamoDB | `itl-<N>-proxy-ia-dev-ddb-batches-01` | `ddb` ? |
-| Alias KMS raw | `alias/itl-<N>-proxy-ia-dev-kms-raw-01` | `kms` ? |
-| Alias KMS clean | `alias/itl-<N>-proxy-ia-dev-kms-clean-01` | `kms` ? |
-| Topic SNS | `itl-<N>-proxy-ia-dev-sns-alarms-01` | `sns` ? |
-| Roles IAM | `itl-<N>-proxy-ia-dev-iam-<lambda>-01` | `iam` ? |
-| Reglas EventBridge | `itl-<N>-proxy-ia-dev-evb-<disparador>-01` | `evb` ? |
+| Lambda sanitizer | `itl-0003-proxy-ia-dev-lambda-sanitizer-03` | `lambda` |
+| Lambda submitter | `itl-0003-proxy-ia-dev-lambda-submitter-03` | `lambda` |
+| Lambda reconciler | `itl-0003-proxy-ia-dev-lambda-reconciler-03` | `lambda` |
+| Lambda fetcher | `itl-0003-proxy-ia-dev-lambda-fetcher-03` | `lambda` |
+| Lambda verifier | `itl-0003-proxy-ia-dev-lambda-verifier-03` | `lambda` |
+| Lambda canary | `itl-0003-proxy-ia-dev-lambda-canary-03` | `lambda` |
+| Bucket raw | `itl-0003-proxy-ia-dev-s3-raw-03` | `s3` |
+| Bucket clean | `itl-0003-proxy-ia-dev-s3-clean-03` | `s3` |
+| Bucket quarantine | `itl-0003-proxy-ia-dev-s3-quarantine-03` | `s3` |
+| Bucket results | `itl-0003-proxy-ia-dev-s3-results-03` | `s3` |
+| Tabla DynamoDB | `itl-0003-proxy-ia-dev-ddb-batches-03` | `ddb` |
+| Alias KMS raw | `alias/itl-0003-proxy-ia-dev-kms-raw-03` | `kms` |
+| Alias KMS clean | `alias/itl-0003-proxy-ia-dev-kms-clean-03` | `kms` |
+| Topic SNS | `itl-0003-proxy-ia-dev-sns-alarms-03` | `sns` |
+| Roles IAM | `itl-0003-proxy-ia-dev-role-<lambda>-03` | `role` |
+| Reglas EventBridge | `itl-0003-proxy-ia-dev-evb-<disparador>-03` | `evb` |
+| Rol de CI | `itl-0003-proxy-ia-dev-role-ci-03` | `role` |
+| Layer | `itl-0003-proxy-ia-dev-lambda-deps-03` | `lambda` |
 
 Y los tres nombres de función que además cambian de idioma: `canario`→`canary`,
 `reconciliador`→`reconciler`, `verificador`→`verifier`. `sanitizer`, `submitter`
 y `fetcher` ya estaban bien.
+
+El repo de código construye estos nombres **en un solo sitio**
+(`scripts/lib/nombres.sh`) y `tests/nombres_test.py` los compara uno a uno con
+esta tabla. Si Terraform y esta tabla discrepan, manda AWS — pero entonces hay
+que corregir la tabla y la prueba, que es justo lo que hace visible la
+discrepancia en vez de dejarla latente.
 
 ### Lo que NO se puede renombrar y hay que recrear
 
@@ -131,12 +132,12 @@ Y dos que sí se renombran pero con consecuencias que no se ven en el plan:
 Hay una tensión que conviene decidir a conciencia. El prefijo de severidad
 (`CRITICO-`, `AVISO-`) existe porque **el nombre de la alarma es el asunto del
 correo**, y en el móvil es lo único que se lee. La convención de la casa pone
-`itl-<N>-...` delante, con lo que todos los asuntos empiezan igual y la
+`itl-0003-...` delante, con lo que todos los asuntos empiezan igual y la
 severidad desaparece de la vista.
 
 Tres salidas, de mejor a peor en mi opinión:
 
-1. **Convención + severidad al final**: `itl-<N>-proxy-ia-dev-cw-hard-block-critico`.
+1. **Convención + severidad al final**: `itl-0003-proxy-ia-dev-cw-hard-block-critico`.
    Respeta el criterio y la severidad sigue en el asunto, aunque al final.
 2. **Convención pura** y la severidad como primera línea de la descripción.
    Consistente, pero se pierde en el asunto — que es donde hacía falta.
@@ -176,14 +177,18 @@ recrea** el recurso. Revisa que en el plan aparezcan también:
 
 Dos avisos concretos:
 
-- **La regla del manifiesto** filtra por prefijo `entrada/` y sufijo
-  `_MANIFEST.json`. Si sólo cambias una de las dos reglas del bucket raw, los
-  lotes se sanitizan pero nunca se envían, o al revés — y no hay error, sólo
-  silencio.
-- **El prefijo `status/` no debe disparar al verificador.** El verificador
-  escucha en `clean/`; el parte de estado se escribe en el mismo bucket bajo
-  `status/` justo para no despertarlo. Si el filtro del verificador se amplía a
-  todo el bucket, se pondrá a verificar partes de estado.
+- **La regla del manifiesto cambia de bucket, no sólo de prefijo.** El
+  manifiesto pasa a publicarse en **clean** bajo `input/`, con sufijo
+  `_MANIFEST.json`; las partes siguen yendo a **raw** bajo `input/`. El motivo
+  es el invariante de siempre: el submitter no puede leer raw, así que un
+  manifiesto en raw lo dejaría sin poder abrirlo. Si sólo cambias una de las dos
+  reglas, los lotes se sanitizan pero nunca se envían, o al revés — y no hay
+  error, sólo silencio.
+- **Ni `status/` ni `input/` deben disparar al verifier.** El verifier escucha
+  en `clean/`; el parte de estado se escribe en el mismo bucket bajo `status/` y
+  ahora el manifiesto bajo `input/`, justo para no despertarlo. Si el filtro se
+  amplía a todo el bucket, se pondrá a verificar partes de estado y manifiestos
+  — documentos sin `requests`, que marcaría como verificados.
 
 ## 3 · Métricas de CloudWatch  ·  las alarmas dejan de ver su métrica
 
@@ -304,7 +309,7 @@ Cambian **el nombre del bucket y el prefijo a la vez**. En
 y pasa a:
 
 ```
-"arn:aws:s3:::itl-<N>-proxy-ia-<entorno>-s3-clean-01/status/*"
+"arn:aws:s3:::itl-0003-proxy-ia-<entorno>-s3-clean-03/status/*"
 ```
 
 Si no se cambia, el equipo de Cuotas deja de poder leer por qué se le rechazó un
@@ -332,8 +337,13 @@ El nombre `CANARY_PREFIX` ya estaba en inglés; lo que cambia es su **valor**.
 Las demás (`RAW_BUCKET`, `CLEAN_BUCKET`, `BATCHES_TABLE`, `ANTHROPIC_SECRET_ARN`,
 `GATE_REJECT_PCT`, `INFLIGHT_LIMIT`…) ya estaban en inglés y no se tocan.
 
-Si una de las dos renombradas no se cambia, la Lambda **no falla**: cae al valor
-por defecto del código (`2`) y nadie se entera. Revísalas explícitamente.
+Si una de las dos renombradas no se cambia, **la Lambda ya no arranca**: el
+código comprueba al importar si el entorno trae un nombre retirado y revienta
+nombrando el que corresponde. Antes no era así —caía al valor por defecto (`2`)
+y nadie se enteraba, con el submitter enviando 2 por tick durante semanas
+mientras alguien creía haber configurado 20—, y por eso ahora falla en frío: un
+arranque roto se diagnostica en un minuto, un valor por defecto silencioso no se
+diagnostica.
 
 ## Lo que hay que cambiar en el repo de código
 
@@ -446,25 +456,25 @@ cambio podía romper:
 
 ```bash
 # 1. La clave nueva existe y el status esta en ingles
-aws dynamodb get-item --table-name itl-<N>-proxy-ia-dev-ddb-batches-01 \
+aws dynamodb get-item --table-name itl-0003-proxy-ia-dev-ddb-batches-03 \
   --region eu-south-2 \
   --key '{"batch_id":{"S":"batch#input/lote-renombrado-01"}}'
 
 # 2. El parte de estado se escribe bajo status/ en el bucket nuevo
-aws s3 ls s3://itl-<N>-proxy-ia-dev-s3-clean-01/status/
+aws s3 ls s3://itl-0003-proxy-ia-dev-s3-clean-03/status/
 
 # 3. Las metricas nuevas se estan emitiendo
 aws cloudwatch list-metrics --namespace IntelicaProxyIA/Sanitizer \
   --region eu-south-2 --query 'Metrics[].MetricName' --output text
 
 # 4. Ninguna alarma se quedo ciega
-aws cloudwatch describe-alarms --alarm-name-prefix itl-<N>-proxy-ia \
+aws cloudwatch describe-alarms --alarm-name-prefix itl-0003-proxy-ia \
   --region eu-south-2 --state-value INSUFFICIENT_DATA \
   --query 'MetricAlarms[].[AlarmName,MetricName]' --output table
 
 # 5. El SNS tiene suscripciones CONFIRMADAS, no pendientes
 aws sns list-subscriptions-by-topic --region eu-south-2 \
-  --topic-arn arn:aws:sns:eu-south-2:<CUENTA>:itl-<N>-proxy-ia-dev-sns-alarms-01 \
+  --topic-arn arn:aws:sns:eu-south-2:<CUENTA>:itl-0003-proxy-ia-dev-sns-alarms-03 \
   --query 'Subscriptions[].[Endpoint,SubscriptionArn]' --output table
 ```
 

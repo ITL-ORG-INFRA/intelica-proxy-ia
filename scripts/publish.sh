@@ -16,8 +16,10 @@ set -Eeuo pipefail
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST="${RAIZ}/dist"
 
+# shellcheck source=scripts/lib/nombres.sh
+source "${RAIZ}/scripts/lib/nombres.sh"
+
 ENTORNO="${1:-}"
-PROYECTO="${PROYECTO:-intelica-proxy-ia}"
 REGION="${AWS_REGION:-eu-south-2}"
 
 ok()   { printf '    \033[32m✓\033[0m %s\n' "$*"; }
@@ -33,8 +35,7 @@ AWS=(aws --region "$REGION" --output json)
 LLAMANTE="$("${AWS[@]}" sts get-caller-identity)" || die "credenciales AWS invalidas"
 CUENTA="$(jq -r .Account <<<"$LLAMANTE")"
 
-P="${PROYECTO}-${ENTORNO}"
-FUNCIONES=(sanitizer verifier submitter reconciler fetcher canary)
+FUNCIONES=("${ITL_FUNCTIONS[@]}")
 
 paso "Destino"
 info "cuenta ${CUENTA} · region ${REGION} · entorno ${ENTORNO}"
@@ -47,14 +48,16 @@ info "revision:  $(jq -r .revision "${DIST}/manifiesto.json")"
 paso "Comprobando que el entorno existe"
 faltan=""
 for f in "${FUNCIONES[@]}"; do
-  "${AWS[@]}" lambda get-function --function-name "${P}-${f}" >/dev/null 2>&1 || faltan="${faltan} ${P}-${f}"
+  nombre="$(itl_lambda "$ENTORNO" "$f")"
+  "${AWS[@]}" lambda get-function --function-name "$nombre" >/dev/null 2>&1 \
+    || faltan="${faltan} ${nombre}"
 done
 [[ -z "$faltan" ]] || die "estas funciones no existen en AWS:${faltan}
 Despliega primero la infraestructura desde el repo de Terraform."
 ok "las 6 funciones existen"
 
 # --- layer -----------------------------------------------------------------
-LAYER="${P}-deps"
+LAYER="$(itl_layer "$ENTORNO")"
 REQ_SHA="$(jq -r .requirements_sha "${DIST}/manifiesto.json")"
 LAYER_ARN=""
 
@@ -89,7 +92,7 @@ sha_lambda() {  # el CodeSha256 de Lambda es el sha256 del zip en base64
 }
 
 for f in "${FUNCIONES[@]}"; do
-  nombre="${P}-${f}"
+  nombre="$(itl_lambda "$ENTORNO" "$f")"
   zipfile="${DIST}/${f}.zip"
   [[ -f "$zipfile" ]] || die "falta ${zipfile}"
 

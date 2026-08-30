@@ -13,13 +13,13 @@
 # datos de tarjeta sin que ninguna prueba falle, asi que no se mergean sin que
 # los mire alguien que entienda el modelo de amenaza.
 /src/sanitizer/             @ITL-ORG-INFRA/seguridad @ITL-ORG-INFRA/plataforma
-/src/verificador/           @ITL-ORG-INFRA/seguridad @ITL-ORG-INFRA/plataforma
-/src/canario/               @ITL-ORG-INFRA/seguridad @ITL-ORG-INFRA/plataforma
+/src/verifier/              @ITL-ORG-INFRA/seguridad @ITL-ORG-INFRA/plataforma
+/src/canary/                @ITL-ORG-INFRA/seguridad @ITL-ORG-INFRA/plataforma
 
 # La segunda implementacion tiene que seguir siendo INDEPENDIENTE de la
 # primera. Si alguien "refactoriza para reutilizar codigo" entre las dos, el
-# verificador deja de verificar y nadie se entera.
-/src/verificador/deteccion2.py  @ITL-ORG-INFRA/seguridad
+# verifier deja de verificar y nadie se entera.
+/src/verifier/detection2.py @ITL-ORG-INFRA/seguridad
 
 # Cualquier numero nuevo que parezca una tarjeta pasa por aqui.
 # Ver docs/SOBRE-LOS-PANES-DE-PRUEBA.md

@@ -25,6 +25,38 @@ def require(*names: str) -> None:
         raise RuntimeError("faltan variables de entorno: " + ", ".join(missing))
 
 
+# --- nombres retirados -----------------------------------------------------
+#: nombre viejo -> nombre actual. Se comprueban al importar, no bajo demanda.
+#:
+#: Esto no es cosmetica. Si Terraform se queda con el nombre viejo, el codigo
+#: nuevo no lo lee y CAE EN EL VALOR POR DEFECTO sin decir nada: se configuro
+#: SUBMIT_MAX_POR_TICK = 20 y el submitter envia 2 por tick para siempre. No
+#: hay error, no hay log, no hay alarma — solo un sistema que va veinte veces
+#: mas lento de lo que alguien cree haber configurado.
+#:
+#: Fallar en frio es la unica forma de que eso se vea. Un arranque roto se
+#: diagnostica en un minuto; un valor por defecto silencioso, en una tarde.
+_RETIRED = {
+    "SUBMIT_MAX_POR_TICK": "SUBMIT_MAX_PER_TICK",
+    "FETCH_MAX_POR_TICK": "FETCH_MAX_PER_TICK",
+}
+
+
+def reject_retired(environ=None) -> None:
+    """Revienta si el entorno trae un nombre de variable ya retirado."""
+    env = os.environ if environ is None else environ
+    found = [(old, new) for old, new in sorted(_RETIRED.items())
+             if env.get(old, "").strip()]
+    if not found:
+        return
+    raise RuntimeError(
+        "variables de entorno retiradas (renombralas en Terraform): "
+        + ", ".join(f"{old} -> {new}" for old, new in found))
+
+
+reject_retired()
+
+
 ENVIRONMENT = _env("ENVIRONMENT", "dev")
 LOG_LEVEL = _env("LOG_LEVEL", "INFO")
 AWS_REGION = _env("AWS_REGION") or _env("AWS_DEFAULT_REGION", "eu-south-2")

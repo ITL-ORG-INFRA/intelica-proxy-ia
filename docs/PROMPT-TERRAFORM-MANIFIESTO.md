@@ -90,7 +90,7 @@ invocar el submitter, acotado al ARN de esa regla.
 
 El manifiesto puede llegar **antes** de que el sanitizer acabe con alguna parte
 —los ficheros se procesan en paralelo y uno grande tarda más—. En ese caso el
-evento del manifiesto no puede enviar nada: deja el lote en `esperando_partes` y
+evento del manifiesto no puede enviar nada: deja el lote en `awaiting_parts` y
 sale. Sin el barrido por horario, ese lote se queda quieto para siempre y nadie
 se entera.
 
@@ -182,5 +182,5 @@ aws dynamodb get-item --table-name <tabla> \
 ```
 
 El item debe existir con `status = enviado` y un `batch_ids` no vacío. Si dice
-`esperando_partes`, el sanitizer aún no acabó y el siguiente tick lo recogerá; si
-dice `cuarentena`, alguna parte fue rechazada.
+`awaiting_parts`, el sanitizer aún no acabó y el siguiente tick lo recogerá; si
+dice `quarantined`, alguna parte fue rechazada.

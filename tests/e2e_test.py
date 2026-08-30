@@ -1,6 +1,6 @@
 """Prueba de extremo a extremo del proxy, sin tocar AWS ni Anthropic.
 
-Monta cada Lambda igual que lo hace deploy/deploy.sh (src/common + su carpeta,
+Monta cada Lambda igual que lo hace scripts/build.sh (src/common + su carpeta,
 en plano) y hace correr el pipeline completo sobre S3 y DynamoDB simulados.
 
     python3 -m venv .venv
@@ -44,7 +44,7 @@ def ck(name, condition, detail=""):
 
 
 def build_event(*folders):
-    """Replica el empaquetado de deploy.sh."""
+    """Replica el empaquetado de scripts/build.sh."""
     target = tempfile.mkdtemp()
     shutil.copytree(os.path.join(REPO, "src", "common"), target, dirs_exist_ok=True)
     for folder in folders:
@@ -103,7 +103,7 @@ def main():
            clean_keys)
         ck("el lote escrito en clean/", f"clean/{clean_batch}.json" in clean_keys,
            clean_keys)
-        ck("parte de estado escrito en estado/",
+        ck("parte de estado escrito en status/",
            f"status/{clean_batch}.json" in clean_keys, clean_keys)
 
         part = json.loads(s3.objetos[(CLEAN, f"status/{clean_batch}.json")])
@@ -260,7 +260,23 @@ def main():
            (CLEAN, "clean/b_envenenado.json") not in s3.objetos, s3.keys_of(CLEAN))
         ck("deja informe en cuarentena",
            any("verifier" in k for k in s3.keys_of(QUAR)), s3.keys_of(QUAR))
-        ck("alarma FalloDelSanitizer", "SanitizerFailure" in cw.names())
+        ck("alarma SanitizerFailure", "SanitizerFailure" in cw.names())
+
+        print("\n[9b] el verifier solo mira clean/")
+        # El bucket clean tiene tres prefijos y solo uno lleva lotes. Bajo
+        # 'input/' aterriza ahora el manifiesto y bajo 'status/' los partes
+        # del sanitizer: ninguno trae 'requests', asi que si el verifier los
+        # procesara marcaria VERIFIED un batch_id que es una clave de S3.
+        for prefijo in ("input/", "status/"):
+            clave = f"{prefijo}algo.json"
+            s3.put_object(Bucket=CLEAN, Key=clave, Body=b'{"files": ["x.json"]}')
+            antes = dict(table_.items)
+            r = verifier.lambda_handler(s3_event(CLEAN, clave), Ctx())
+            ck(f"{prefijo} no despierta al verifier",
+               r.get("skipped", "").startswith("fuera de"), r)
+            ck(f"{prefijo} no toca la tabla", table_.items == antes,
+               set(table_.items) ^ set(antes))
+            ck(f"{prefijo} no borra el objeto", (CLEAN, clave) in s3.objetos)
 
         print("\n[10] admision: la cola en vuelo no se puede sobrepasar")
         store2.update("b_uno", status=store2.Status.VERIFIED, request_count=600,

@@ -28,25 +28,31 @@ tienen respuesta no se parece a un PDF de verdad.
 ./scripts/subir-lote.sh dev ejemplos/lote-multiparte lote-tarifas-01
 ```
 
-Sube las tres partes a `raw/entrada/lote-tarifas-01/` y, al final, genera y sube
-el `_MANIFEST.json` — que es lo que dispara la validación y el paso a zona
-limpia. El `_MANIFEST.json` no está en la carpeta a propósito: lo escribe el
-script con los sha256 reales de lo que acaba de subir.
+Sube las tres partes a `raw/input/lote-tarifas-01/` y, al final, genera y sube
+el `_MANIFEST.json` a `clean/input/lote-tarifas-01/` — que es lo que dispara el
+envío. El `_MANIFEST.json` no está en la carpeta a propósito: lo escribe el
+script a partir de lo que acaba de subir, para que su lista `files` no pueda
+discrepar de la realidad.
+
+Las partes van a `raw` y el manifiesto a `clean`, bajo la **misma** carpeta
+`input/lote-tarifas-01/`. Es esa coincidencia de carpeta la que permite al
+submitter emparejarlos sin leer `raw`, que es un bucket sobre el que no tiene —
+ni debe tener— permiso.
 
 Seguir el veredicto:
 
 ```bash
 aws dynamodb get-item --region eu-south-2 \
-  --table-name intelica-proxy-ia-dev-batches \
-  --key '{"batch_id":{"S":"lote#entrada/lote-tarifas-01"}}'
+  --table-name itl-0003-proxy-ia-dev-ddb-batches-03 \
+  --key '{"batch_id":{"S":"batch#input/lote-tarifas-01"}}'
 ```
 
 | `status` | Qué pasó |
 |---|---|
-| `esperando_partes` | Aún faltan partes por sanitizar |
-| `listo` | Las tres pasaron el filtro; el submitter lo va a enviar |
-| `enviado` | Está en Anthropic. `batch_id_anthropic` dice cuál |
-| `cuarentena` | Alguna parte fue rechazada. El lote entero se para |
+| `awaiting_parts` | Aún faltan partes por sanitizar |
+| `ready` | Las tres pasaron el filtro; el submitter lo va a enviar |
+| `submitted` | Está en Anthropic. `anthropic_batch_id` dice cuál |
+| `quarantined` | Alguna parte fue rechazada. El lote entero se para |
 
 ## Antes de subir nada
 

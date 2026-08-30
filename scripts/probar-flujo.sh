@@ -16,11 +16,13 @@
 set -Eeuo pipefail
 
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=scripts/lib/nombres.sh
+source "${RAIZ}/scripts/lib/nombres.sh"
+
 ENTORNO="${1:-}"
 shift || true
 FICHEROS=("$@")
 
-PROYECTO="${PROYECTO:-intelica-proxy-ia}"
 REGION="${AWS_REGION:-eu-south-2}"
 ESPERA_MAX="${ESPERA_MAX:-90}"
 
@@ -45,10 +47,11 @@ AWS=(aws --region "$REGION" --output json)
 CUENTA="$("${AWS[@]}" sts get-caller-identity | jq -r .Account)" \
   || die "credenciales AWS invalidas o expiradas"
 
-P="${PROYECTO}-${ENTORNO}"
-RAW="${P}-raw-${CUENTA}"
-CLEAN="${P}-clean-${CUENTA}"
-QUAR="${P}-quarantine-${CUENTA}"
+RAW="$(itl_bucket "$ENTORNO" raw)"
+CLEAN="$(itl_bucket "$ENTORNO" clean)"
+QUAR="$(itl_bucket "$ENTORNO" quarantine)"
+TABLA="$(itl_table "$ENTORNO")"
+LOG_SANITIZER="$(itl_log_group "$ENTORNO" sanitizer)"
 
 if [[ ${#FICHEROS[@]} -eq 0 ]]; then
   FICHEROS=("${RAIZ}/ejemplos")
@@ -102,12 +105,12 @@ for fichero in "${FICHEROS[@]}"; do
   esperado=""
   if [[ -f "$manifiesto" ]]; then
     esperado="$(jq -r --arg f "$nombre" \
-      '.cases[] | select(.fichero == $f) | .esperado // ""' "$manifiesto" 2>/dev/null)"
+      '.cases[] | select(.file == $f) | .expected // ""' "$manifiesto" 2>/dev/null)"
     [[ -n "$esperado" ]] && dato "esperado: ${esperado}"
   fi
   dato "peticiones: $(jq '.requests | length' "$fichero")"
 
-  clave="input/prueba-$(date +%Y%m%d-%H%M%S)-${nombre}"
+  clave="${ITL_PREFIX_INPUT}prueba-$(date +%Y%m%d-%H%M%S)-${nombre}"
   "${AWS[@]}" s3api put-object --bucket "$RAW" --key "$clave" \
     --body "$fichero" --content-type application/json >/dev/null
   etag="$("${AWS[@]}" s3api head-object --bucket "$RAW" --key "$clave" | jq -r .ETag | tr -d '"')"
@@ -120,7 +123,7 @@ for fichero in "${FICHEROS[@]}"; do
   for _ in $(seq 1 "$ESPERA_MAX"); do
     # 's3 cp -' escribe solo el cuerpo; 's3api get-object' mezclaria el
     # cuerpo con los metadatos de la respuesta en la misma salida.
-    if parte="$("${AWS[@]}" s3 cp "s3://${CLEAN}/status/${lote}.json" - 2>/dev/null)"; then
+    if parte="$("${AWS[@]}" s3 cp "s3://${CLEAN}/${ITL_PREFIX_STATUS}${lote}.json" - 2>/dev/null)"; then
       [[ -n "$parte" ]] && break
     fi
     printf '.'
@@ -131,7 +134,7 @@ for fichero in "${FICHEROS[@]}"; do
 
   if [[ -z "$parte" ]]; then
     printf '    %s?%s sin parte tras %ss\n' "$AMBAR" "$R" "$ESPERA_MAX"
-    dato "mira el log:  aws logs tail /aws/lambda/${P}-sanitizer --since 5m --region ${REGION}"
+    dato "mira el log:  aws logs tail ${LOG_SANITIZER} --since 5m --region ${REGION}"
     sin_respuesta=$((sin_respuesta + 1))
     continue
   fi
@@ -144,20 +147,20 @@ for fichero in "${FICHEROS[@]}"; do
     discrepancias=$((discrepancias + 1))
   fi
 
-  if [[ "$estado" == "limpio" ]]; then
-    printf '    %s✓ LIMPIO%s  %s\n' "$VERDE" "$R" "$(jq -c '.peticiones' <<<"$parte")"
+  if [[ "$estado" == "clean" ]]; then
+    printf '    %s✓ LIMPIO%s  %s\n' "$VERDE" "$R" "$(jq -c '.request_counts' <<<"$parte")"
     limpios=$((limpios + 1))
   else
-    printf '    %s✗ CUARENTENA%s  %s\n' "$ROJO" "$R" "$(jq -c '.peticiones' <<<"$parte")"
+    printf '    %s✗ CUARENTENA%s  %s\n' "$ROJO" "$R" "$(jq -c '.request_counts' <<<"$parte")"
     printf '      motivo: %s\n' "$(jq -r '.reason' <<<"$parte")"
     jq -r '.summary_by_layer | to_entries[] | "      \(.key): \(.value)"' <<<"$parte" 2>/dev/null || true
-    jq -r '.rejections[]? | "      requests[\(.indice)] " +
-             (if .hallazgos then (.hallazgos[] | "capa \(.capa) \(.tipo) — \(.detalle) en \(.donde)")
-              else .detalle end)' <<<"$parte" 2>/dev/null | head -6 || true
+    jq -r '.rejections[]? | "      requests[\(.index)] " +
+             (if .findings then (.findings[] | "capa \(.layer) \(.type) — \(.detail) en \(.where)")
+              else .detail end)' <<<"$parte" 2>/dev/null | head -6 || true
     jq -r '.what_to_do[]? | "      → \(.)"' <<<"$parte" 2>/dev/null || true
     cuarentena=$((cuarentena + 1))
   fi
-  dato "parte completo: aws s3 cp s3://${CLEAN}/status/${lote}.json - --region ${REGION}"
+  dato "parte completo: aws s3 cp s3://${CLEAN}/${ITL_PREFIX_STATUS}${lote}.json - --region ${REGION}"
 done
 
 paso "Resumen"
@@ -173,14 +176,14 @@ cat <<AYUDA
     ${B}Para mirar mas a fondo${R}
 
       Log del sanitizer, en vivo:
-        aws logs tail /aws/lambda/${P}-sanitizer --follow --region ${REGION}
+        aws logs tail ${LOG_SANITIZER} --follow --region ${REGION}
 
       Informe de cuarentena (solo infra, esta dentro del CDE):
-        aws s3 ls s3://${QUAR}/quarantine/ --region ${REGION}
+        aws s3 ls s3://${QUAR}/${ITL_PREFIX_QUARANTINE} --region ${REGION}
 
       Estado de todos los lotes:
-        aws dynamodb scan --table-name ${P}-batches \\
-          --projection-expression "batch_id,#s,motivo" \\
+        aws dynamodb scan --table-name ${TABLA} \\
+          --projection-expression "batch_id,#s,reason" \\
           --expression-attribute-names '{"#s":"status"}' \\
           --region ${REGION} | jq -r '.Items[] | [.batch_id.S, .status.S, (.reason.S // "")] | @tsv'
 

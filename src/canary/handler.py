@@ -1,4 +1,4 @@
-"""λ CANARIO — la unica prueba falsable de que el sanitizer funciona.
+"""λ CANARY — la unica prueba falsable de que el sanitizer funciona.
 
 Corre una vez por hora en dos fases:
 
@@ -46,9 +46,9 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     started = time.monotonic()
 
     verdict = _check_previous()
-    plantado = _plant()
+    planted = _plant()
 
-    resumen = {**verdict, "plantado": plantado,
+    resumen = {**verdict, "planted": planted,
                "ms": round((time.monotonic() - started) * 1000)}
     log.info("canary", extra={f"ctx_{k}": v for k, v in resumen.items()})
     return resumen
@@ -78,7 +78,7 @@ def _check_previous() -> Dict[str, Any]:
 
     # Cualquier otro estado significa que unos PANes de prueba pasaron el gate.
     _metric("CanaryNotBlocked", 1)
-    log.error("EL SANITIZER NO BLOQUEO EL CANARIO", extra={
+    log.error("EL SANITIZER NO BLOQUEO EL CANARY", extra={
         "ctx_batch_id": batch_id, "ctx_status": state})
     return {"verdict": "FALLO", "batch_id": batch_id, "status": state,
             "reason": "PANes de prueba superaron el gate"}
@@ -98,7 +98,7 @@ def _plant() -> str:
             }}
             for i, (_name, text) in enumerate(CASES)
         ],
-        "metadata": {"canary": True, "plantado_en": store.now_iso()},
+        "metadata": {"canary": True, "planted_at": store.now_iso()},
     }
 
     _s3.put_object(
@@ -116,6 +116,6 @@ def _plant() -> str:
         f"{RAW_BUCKET}/{key_}/{etag}".encode("utf-8")).hexdigest()[:24]
 
     store.update("__canary__", last_batch=batch_id, last_key=key_,
-                 plantado_en=store.now_iso(), cases=len(CASES))
-    log.info("canary plantado", extra={"ctx_batch_id": batch_id, "ctx_casos": len(CASES)})
+                 planted_at=store.now_iso(), cases=len(CASES))
+    log.info("canary plantado", extra={"ctx_batch_id": batch_id, "ctx_cases": len(CASES)})
     return batch_id

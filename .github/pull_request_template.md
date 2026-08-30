@@ -12,7 +12,7 @@
 
 Marca lo que aplique. Si marcas alguna, explica debajo.
 
-- [ ] Toca `src/sanitizer/`, `src/verificador/` o `src/canario/`
+- [ ] Toca `src/sanitizer/`, `src/verifier/` o `src/canary/`
 - [ ] Cambia qué se detecta o qué se deja pasar
 - [ ] Cambia el umbral del gate, la lista blanca de modelos o un límite
 - [ ] Añade o quita una dependencia
@@ -24,7 +24,7 @@ Marca lo que aplique. Si marcas alguna, explica debajo.
 
 - [ ] `make pruebas` pasa en local
 - [ ] Si toqué un detector, **añadí un caso que falla sin el cambio**
-- [ ] Si toqué el canario, actualicé `src/canario/casos.py` (fuente única)
+- [ ] Si toqué el canary, actualicé `src/canary/cases.py` (fuente única)
 - [ ] No hay payload ni valores de tarjeta en logs ni en mensajes de error
 
 ## Si esto toca la frontera CDE

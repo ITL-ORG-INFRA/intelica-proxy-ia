@@ -1,4 +1,4 @@
-"""λ VERIFICADOR — segunda opinion sobre la zona limpia.
+"""λ VERIFIER — segunda opinion sobre la zona limpia.
 
 Lee lo que el sanitizer dio por bueno y lo vuelve a mirar con OTRO algoritmo
 (detection2). Si encuentra algo, no es "una peticion mala": es que el
@@ -29,6 +29,19 @@ NAMESPACE = "IntelicaProxyIA/Verifier"
 
 #: la ventana deslizante es ruidosa por diseno; con los primeros basta para decidir
 MAX_FINDINGS_REPORTED = 50
+
+#: lo unico que este rol verifica: la salida sanitizada.
+#:
+#: El bucket clean tiene tres prefijos y solo uno lleva datos ya procesados.
+#: Bajo 'input/' aterriza el manifiesto que cierra un lote, y bajo 'status/'
+#: los partes de estado que escribe el propio sanitizer. Ninguno de los dos
+#: es un lote: no traen 'requests', asi que el verifier no encontraria nada y
+#: acabaria marcando VERIFIED un batch_id que en realidad es una clave de S3.
+#:
+#: Terraform filtra la regla por prefijo, pero un filtro se puede desconfigurar
+#: —y con el manifiesto viviendo ahora en clean, desconfigurarlo dispararia el
+#: verifier en cada lote que se cierra. La guarda cuesta tres lineas.
+VERIFIED_PREFIX = "clean/"
 
 
 def _metric(name: str, value: float) -> None:
@@ -73,6 +86,11 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     if not key:
         raise ValueError("el evento no trae la clave del objeto")
 
+    if not key.startswith(VERIFIED_PREFIX):
+        # Ni error ni excepcion: es un objeto que no le toca mirar.
+        log.info("objeto fuera de clean/, ignorado", extra={"ctx_key": key})
+        return {"skipped": "fuera de " + VERIFIED_PREFIX, "key": key}
+
     body = _s3.get_object(Bucket=bucket, Key=key)["Body"].read()
     documento = json.loads(body)
     batch = documento.get("batch_id", key)
@@ -114,10 +132,10 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             Body=json.dumps({
                 "batch_id": batch,
                 "reason": "el verifier encontro PAN en datos ya sanitizados",
-                "severidad": "fallo_de_control",
+                "severity": "control_failure",
                 "clean_key_deleted": f"{bucket}/{key}",
                 "findings": findings,
-                "detectado_en": store.now_iso(),
+                "detected_at": store.now_iso(),
             }, ensure_ascii=False).encode("utf-8"),
             ContentType="application/json")
 
@@ -137,5 +155,5 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
     log.info("lote verificado", extra={
         "ctx_batch_id": batch, "ctx_texts": reviewed,
-        "ctx_unicos": len(vistos), "ctx_sospechas": sospechas, "ctx_ms": ms})
-    return {"batch_id": batch, "status": Status.VERIFIED, "textos": reviewed, "ms": ms}
+        "ctx_unique": len(vistos), "ctx_suspicious": sospechas, "ctx_ms": ms})
+    return {"batch_id": batch, "status": Status.VERIFIED, "texts": reviewed, "ms": ms}

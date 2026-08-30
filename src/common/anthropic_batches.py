@@ -34,12 +34,12 @@ def client(max_retries: int = 2) -> anthropic.Anthropic:
 
 
 class AnthropicError(Exception):
-    def __init__(self, message: str, status: int = 502, codigo: str = "upstream_error",
+    def __init__(self, message: str, status: int = 502, code: str = "upstream_error",
                  retry_after: Optional[float] = None):
         super().__init__(message)
         self.message = message
         self.status = status
-        self.codigo = codigo
+        self.code = code
         self.retry_after = retry_after
 
 

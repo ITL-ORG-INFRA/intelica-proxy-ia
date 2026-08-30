@@ -32,14 +32,14 @@ RATELIMIT_ITEM = "__ratelimit__"
 class Status:
     """Por donde va el lote. El orden es el del diagrama."""
 
-    RECEIVED = "received"          # esta en raw, el sanitizer aun no lo vio
-    CLEAN_ = "clean"              # paso el gate, esta en clean
-    VERIFIED = "verified"      # el verifier (2a implementacion) lo confirmo
-    HELD = "held"          # admision denegada: no cabe en la cola en vuelo
-    SUBMITTED = "submitted"            # POSTeado a Anthropic, procesando
-    COMPLETED = "completed"        # Anthropic acabo, faltan los resultados
-    DELIVERED = "delivered"        # resultados sanitizados y en S3 results
-    QUARANTINED = "quarantined"      # el gate lo aborto, nunca cruza
+    RECEIVED = "received"        # esta en raw, el sanitizer aun no lo vio
+    CLEAN_ = "clean"             # paso el gate, esta en clean
+    VERIFIED = "verified"        # el verifier (2a implementacion) lo confirmo
+    HELD = "held"                # admision denegada: no cabe en la cola en vuelo
+    SUBMITTED = "submitted"      # POSTeado a Anthropic, procesando
+    COMPLETED = "completed"      # Anthropic acabo, faltan los resultados
+    DELIVERED = "delivered"      # resultados sanitizados y en S3 results
+    QUARANTINED = "quarantined"  # el gate lo aborto, nunca cruza
     EXPIRED = "expired"          # >24 h sin terminar
     FAILED = "failed"
 
@@ -241,15 +241,15 @@ def decode_cursor(cursor: str) -> Dict[str, Any]:
 # todo": hasta que llega, no se sabe cuantas partes tiene el lote.
 #
 # Dos items:
-#   lote#<prefijo>   el lote y por donde va
-#   part#<key>      una parte concreta, para no contarla dos veces
+#   batch#<prefijo>  el lote y por donde va
+#   part#<key>       una parte concreta, para no contarla dos veces
 # ---------------------------------------------------------------------------
 
 class BatchState:
-    AWAITING_PARTS = "awaiting_parts"   # falta que el sanitizer acabe alguna
-    READY = "ready"                         # todas limpias, se puede enviar
+    AWAITING_PARTS = "awaiting_parts"  # falta que el sanitizer acabe alguna
+    READY = "ready"                    # todas limpias, se puede enviar
     SUBMITTED = "submitted"
-    QUARANTINED = "quarantined"               # alguna parte fue rechazada
+    QUARANTINED = "quarantined"        # alguna parte fue rechazada
     FAILED = "failed"
 
     #: los que el barrido programado tiene que reintentar
@@ -267,7 +267,11 @@ class AlreadySubmitted(Exception):
 def batch_of(key: str) -> str:
     """El lote es la carpeta que contiene la parte.
 
-    entrada/lote-2026-08-27/parte-01.json  ->  entrada/lote-2026-08-27
+    input/lote-2026-08-27/parte-01.json  ->  input/lote-2026-08-27
+
+    Es la misma carpeta en los dos buckets: las partes viven en raw bajo esa
+    clave y el manifiesto en clean bajo la misma. Por eso el submitter puede
+    emparejarlos sin leer raw.
     """
     return key.rsplit("/", 1)[0] if "/" in key else ""
 
@@ -329,7 +333,7 @@ def batch_state(batch: str) -> Optional[Dict[str, Any]]:
 def batch_verdict(batch: str) -> str:
     """Que se puede hacer con el lote ahora mismo.
 
-    Devuelve uno de: 'sin_manifiesto', 'esperando_partes', 'cuarentena', 'listo'.
+    Devuelve uno de: 'no_manifest', 'awaiting_parts', 'quarantined', 'ready'.
     """
     item = batch_state(batch)
     if not item:
@@ -366,7 +370,7 @@ def mark_batch(batch: str, state: str, **extra: Any) -> None:
 
 
 def claim_submission(batch: str) -> None:
-    """Reserva el envio del lote. Lanza YaEnviado si otro se lo llevo.
+    """Reserva el envio del lote. Lanza AlreadySubmitted si otro se lo llevo.
 
     Hace falta porque hay DOS caminos que pueden decidir enviar: el manifiesto
     al aterrizar, y la ultima parte al terminar de sanitizarse. Si coinciden en

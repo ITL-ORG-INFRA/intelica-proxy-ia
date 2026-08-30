@@ -17,10 +17,13 @@
 # ---------------------------------------------------------------------------
 set -Eeuo pipefail
 
+RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=scripts/lib/nombres.sh
+source "${RAIZ}/scripts/lib/nombres.sh"
+
 ENTORNO="${1:-}"
 shift || true
 
-PROYECTO="${PROYECTO:-intelica-proxy-ia}"
 REGION="${AWS_REGION:-eu-south-2}"
 
 if [[ -t 1 ]]; then
@@ -42,7 +45,8 @@ done
 AWS=(aws --region "$REGION" --output json)
 "${AWS[@]}" sts get-caller-identity >/dev/null || die "credenciales AWS invalidas"
 
-P="${PROYECTO}-${ENTORNO}"
+PREFIJO="$(itl_prefix "$ENTORNO")"
+TABLA="$(itl_table "$ENTORNO")"
 
 # El orden importa: el submitter manda lo que el verifier aprobo, el
 # reconciler marca lo que Anthropic termino, y el fetcher baja eso ultimo.
@@ -55,7 +59,7 @@ case "${1:-}" in
 esac
 
 paso "Estado de las reglas de EventBridge"
-"${AWS[@]}" events list-rules --name-prefix "$P" \
+"${AWS[@]}" events list-rules --name-prefix "$PREFIJO" \
   --query 'Rules[].[Name,State]' --output text 2>/dev/null \
   | while IFS=$'\t' read -r nombre estado; do
       if [[ "$estado" == "ENABLED" ]]; then
@@ -66,12 +70,12 @@ paso "Estado de las reglas de EventBridge"
     done || dato "no se pudieron listar las reglas"
 
 for lambda in "${SECUENCIA[@]}"; do
-  nombre="${P}-${lambda}"
+  nombre="$(itl_lambda "$ENTORNO" "$lambda")"
   paso "$nombre"
 
   salida="$(mktemp)"
   if respuesta="$("${AWS[@]}" lambda invoke --function-name "$nombre" \
-        --payload '{"origen":"ciclo-manual"}' --cli-binary-format raw-in-base64-out \
+        --payload '{"source":"ciclo-manual"}' --cli-binary-format raw-in-base64-out \
         "$salida" 2>&1)"; then
     error="$(jq -r '.FunctionError // empty' <<<"$respuesta")"
     if [[ -n "$error" ]]; then
@@ -89,7 +93,7 @@ for lambda in "${SECUENCIA[@]}"; do
 done
 
 paso "Estado de los lotes"
-"${AWS[@]}" dynamodb scan --table-name "${P}-batches" \
+"${AWS[@]}" dynamodb scan --table-name "$TABLA" \
   --projection-expression "batch_id,#s" \
   --expression-attribute-names '{"#s":"status"}' 2>/dev/null \
   | jq -r '.Items[]? | .status.S // "sin-estado"' | sort | uniq -c \
@@ -99,8 +103,8 @@ paso "Estado de los lotes"
 
 cat <<AYUDA
 
-    ${D}Un lote recorre: recibido -> limpio -> verificado -> enviado ->
-    terminado -> entregado. Si se queda en 'verificado', falta el submitter;
-    si se queda en 'terminado', falta el fetcher.${R}
+    ${D}Un lote recorre: received -> clean -> verified -> submitted ->
+    completed -> delivered. Si se queda en 'verified', falta el submitter;
+    si se queda en 'completed', falta el fetcher.${R}
 
 AYUDA

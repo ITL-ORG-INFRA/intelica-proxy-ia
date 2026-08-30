@@ -6,9 +6,13 @@ el verifier.
 
 Tiene DOS disparadores, y los dos acaban en el mismo sitio:
 
-  1. Evento de S3 sobre raw/**/_MANIFEST.json — el productor ha terminado de
+  1. Evento de S3 sobre **/_MANIFEST.json — el productor ha terminado de
      subir el lote y avisa. Si todas las partes estan sanitizadas, se envia en
      el acto.
+
+     El manifiesto vive en CLEAN, no en raw: no lleva datos, solo la lista de
+     lo que compone el lote. Por eso este rol puede leerlo el mismo, sin
+     ganar acceso a raw — que es justo lo que no puede tener.
 
   2. Horario — barrido de seguridad. Cubre el caso en que el manifiesto llego
      ANTES de que el sanitizer acabara con alguna parte: ahi el evento no pudo
@@ -20,7 +24,7 @@ veces y se pagaria dos veces.
 """
 import json
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 from urllib.parse import unquote_plus
 
 import boto3
@@ -28,8 +32,7 @@ import boto3
 import store
 from anthropic_batches import AnthropicError, create_batch
 from config import (
-    CLEAN_BUCKET, ENVIRONMENT, INFLIGHT_LIMIT, RAW_BUCKET,
-    SUBMIT_MAX_PER_TICK, require,
+    CLEAN_BUCKET, ENVIRONMENT, INFLIGHT_LIMIT, SUBMIT_MAX_PER_TICK, require,
 )
 from logs import get_logger
 from store import Status
@@ -62,29 +65,44 @@ def _throttled() -> float:
 MANIFEST = "_MANIFEST.json"
 
 
-def _key_from_event(event: Dict[str, Any]) -> str:
-    """La clave del objeto si el evento viene de S3; vacio si es un tick.
+def _source_from_event(event: Dict[str, Any]) -> Tuple[str, str]:
+    """(bucket, key) del objeto si el evento viene de S3; ("","") si es un tick.
 
-    Solo se decodifica la de la notificacion nativa de S3. EventBridge la
-    entrega sin codificar, y decodificarla convertiria un '+' literal en un
+    El BUCKET sale del evento, no de una constante. El manifiesto se publica
+    en clean, pero atarlo aqui a CLEAN_BUCKET seria volver a asumir donde
+    esta: si manana se mueve, el submitter leeria del sitio equivocado y
+    marcaria el lote ilegible sin decir por que. Lo que dispara la invocacion
+    es el propio objeto, y el evento ya dice donde vive.
+
+    Solo se decodifica la clave de la notificacion nativa de S3. EventBridge
+    la entrega sin codificar, y decodificarla convertiria un '+' literal en un
     espacio: el manifiesto pasaria a apuntar a un lote que no existe, y el
     submitter lo marcaria fallido con un nombre corrupto.
     """
     if event.get("source") == "aws.s3" or "detail" in event:
-        return event.get("detail", {}).get("object", {}).get("key", "")
+        detail = event.get("detail", {})
+        return (detail.get("bucket", {}).get("name", ""),
+                detail.get("object", {}).get("key", ""))
     registros = event.get("Records") or []
     if registros and "s3" in registros[0]:
-        return unquote_plus(registros[0]["s3"].get("object", {}).get("key", ""))
-    return ""
+        s3e = registros[0]["s3"]
+        return (s3e.get("bucket", {}).get("name", ""),
+                unquote_plus(s3e.get("object", {}).get("key", "")))
+    return "", ""
+
+
+def _key_from_event(event: Dict[str, Any]) -> str:
+    """Solo la clave. Se conserva porque las pruebas de codificacion la usan."""
+    return _source_from_event(event)[1]
 
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     require("CLEAN_BUCKET", "BATCHES_TABLE", "ANTHROPIC_SECRET_ARN")
     started = time.monotonic()
 
-    key = _key_from_event(event)
+    bucket, key = _source_from_event(event)
     if key.endswith(MANIFEST):
-        return _by_manifest(key, started)
+        return _by_manifest(bucket, key, started)
 
     wait = _throttled()
     if wait > 0:
@@ -137,13 +155,13 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 status=Status.SUBMITTED,
                 anthropic_batch_id=remote_batch["id"],
                 submitted_at=store.now_iso(),
-                expira_en=remote_batch.get("expires_at"),
+                expires_at=remote_batch.get("expires_at"),
             )
             submitted += 1
             in_flight += how_many
             log.info("lote enviado", extra={
                 "ctx_batch_id": batch_id, "ctx_anthropic_id": remote_batch["id"],
-                "ctx_requests": how_many, "ctx_en_vuelo": in_flight})
+                "ctx_requests": how_many, "ctx_in_flight": in_flight})
 
         except AnthropicError as exc:
             # La reserva se devuelve: si no se envio, no ocupa cola.
@@ -152,10 +170,10 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             if exc.retry_after:
                 store.save_ratelimit({"retry-after": str(exc.retry_after)})
             store.update(batch_id, status=Status.VERIFIED,
-                         reason=f"envio fallido: {exc.codigo}")
+                         reason=f"envio fallido: {exc.code}")
             log.error("fallo al enviar", extra={
-                "ctx_batch_id": batch_id, "ctx_codigo": exc.codigo})
-            if exc.codigo == "rate_limited":
+                "ctx_batch_id": batch_id, "ctx_code": exc.code})
+            if exc.code == "rate_limited":
                 break  # no se insiste en el mismo tick
         except Exception:  # noqa: BLE001
             store.release(batch_id, how_many)
@@ -186,7 +204,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 # Camino 1: llego el manifiesto
 # ---------------------------------------------------------------------------
 
-def _by_manifest(manifest_key: str, started: float) -> Dict[str, Any]:
+def _by_manifest(bucket: str, manifest_key: str, started: float) -> Dict[str, Any]:
     """El productor ha cerrado el lote. Se envia si esta completo."""
     folder = store.batch_of(manifest_key)
     if not folder:
@@ -194,9 +212,11 @@ def _by_manifest(manifest_key: str, started: float) -> Dict[str, Any]:
                   extra={"ctx_key": manifest_key})
         return {"error": "manifiesto sin carpeta de lote"}
 
+    # El bucket del evento, no una constante: ver _source_from_event.
+    manifest_bucket = bucket or CLEAN_BUCKET
     try:
         manifest = json.loads(
-            _s3.get_object(Bucket=RAW_BUCKET, Key=manifest_key)["Body"].read())
+            _s3.get_object(Bucket=manifest_bucket, Key=manifest_key)["Body"].read())
     except Exception as exc:  # noqa: BLE001
         log.error("manifiesto ilegible", extra={"ctx_key": manifest_key})
         store.mark_batch(folder, store.BatchState.FAILED,
@@ -279,7 +299,7 @@ def _submit_batch(folder: str, started: float) -> Dict[str, Any]:
                               reason=f"la parte {name} no tiene salida limpia registrada")
             log.error("parte sin salida limpia registrada",
                       extra={"ctx_batch": folder, "ctx_file": name})
-            return {"batch": folder, "status": "failed", "falta": name}
+            return {"batch": folder, "status": "failed", "missing": name}
 
         try:
             body = _s3.get_object(Bucket=CLEAN_BUCKET, Key=clean_key)["Body"].read()
@@ -290,7 +310,7 @@ def _submit_batch(folder: str, started: float) -> Dict[str, Any]:
                               reason=f"no se pudo leer la salida limpia de {name}")
             log.error("salida limpia ilegible",
                       extra={"ctx_batch": folder, "ctx_file": name})
-            return {"batch": folder, "status": "failed", "falta": name}
+            return {"batch": folder, "status": "failed", "missing": name}
 
         for request in json.loads(body).get("requests", []):
             custom_id = request.get("custom_id")
@@ -304,7 +324,7 @@ def _submit_batch(folder: str, started: float) -> Dict[str, Any]:
                     "ctx_file": name})
                 _metric("DuplicateCustomId", 1)
                 return {"batch": folder, "status": "failed",
-                        "custom_id_duplicado": custom_id}
+                        "duplicate_custom_id": custom_id}
             ids_vistos.add(custom_id)
             requests.append(request)
 
@@ -319,20 +339,20 @@ def _submit_batch(folder: str, started: float) -> Dict[str, Any]:
     except AnthropicError as exc:
         # Se devuelve a LISTO para que el barrido lo reintente.
         store.mark_batch(folder, store.BatchState.READY,
-                          reason=f"envio fallido: {exc.codigo}")
+                          reason=f"envio fallido: {exc.code}")
         if exc.retry_after:
             store.save_ratelimit({"retry-after": str(exc.retry_after)})
         log.error("fallo al enviar el lote", extra={
-            "ctx_batch": folder, "ctx_codigo": exc.codigo})
+            "ctx_batch": folder, "ctx_code": exc.code})
         _metric("SubmitsFailed", 1)
-        return {"batch": folder, "status": "reintentable", "codigo": exc.codigo}
+        return {"batch": folder, "status": "retryable", "code": exc.code}
 
     store.mark_batch(folder, store.BatchState.SUBMITTED,
                       batch_ids=[remote_batch["id"]],
                       anthropic_batch_id=remote_batch["id"],
                       request_count=len(requests),
                       submitted_at=store.now_iso(),
-                      expira_en=remote_batch.get("expires_at"))
+                      expires_at=remote_batch.get("expires_at"))
 
     _metric("BatchesSubmitted", 1)
     _metric("RequestsSubmitted", len(requests))
@@ -365,5 +385,5 @@ def sweep_pending() -> Dict[str, int]:
         elif result.get("status") == "awaiting_parts":
             resumen["awaiting"] += 1
         else:
-            resumen["cerrados"] += 1
+            resumen["closed"] += 1
     return resumen

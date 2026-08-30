@@ -8,7 +8,9 @@ PY="${PYTHON:-.venv/bin/python}"
 fallos=0
 for prueba in tests/detectores_test.py tests/detection2_test.py \
               tests/envelope_test.py tests/fixtures_test.py \
-              tests/e2e_test.py tests/manifiesto_test.py; do
+              tests/e2e_test.py tests/manifiesto_test.py \
+              tests/nombres_test.py tests/contrato_test.py \
+              tests/limpieza_test.py; do
   echo; echo "=============== $prueba ==============="
   "$PY" "$prueba" || fallos=$((fallos+1))
 done

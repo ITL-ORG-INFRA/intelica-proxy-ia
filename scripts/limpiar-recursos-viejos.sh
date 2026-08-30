@@ -42,7 +42,11 @@ for arg in "$@"; do
   esac
 done
 
-PROYECTO="${PROYECTO:-intelica-proxy-ia}"
+# shellcheck source=scripts/lib/nombres.sh
+source "${RAIZ}/scripts/lib/nombres.sh"
+# shellcheck source=scripts/lib/s3-conteo.sh
+source "${RAIZ}/scripts/lib/s3-conteo.sh"
+
 REGION="${AWS_REGION:-eu-south-2}"
 
 if [[ -t 1 ]]; then
@@ -69,13 +73,15 @@ CUENTA="$("${AWS[@]}" sts get-caller-identity | jq -r .Account)" \
   || die "credenciales AWS invalidas o expiradas"
 QUIEN="$("${AWS[@]}" sts get-caller-identity | jq -r .Arn)"
 
-P="${PROYECTO}-${ENTORNO}"
-BUCKETS=("${P}-raw-${CUENTA}" "${P}-clean-${CUENTA}"
-         "${P}-quarantine-${CUENTA}" "${P}-results-${CUENTA}")
-TABLA="${P}-batches"
-FUNCIONES=(sanitizer submitter reconciliador fetcher verificador canario)
-ROLES=(rol-sanitizer rol-submitter rol-verificador rol-canario)
-ALIAS=("alias/${P}-cmk-raw" "alias/${P}-cmk-clean")
+P="$(itl_prefix "$ENTORNO")"
+BUCKETS=()
+for b in raw clean quarantine results; do
+  BUCKETS+=("$(itl_bucket "$ENTORNO" "$b")")
+done
+TABLA="$(itl_table "$ENTORNO")"
+FUNCIONES=("${ITL_FUNCTIONS[@]}")
+ROLES=(sanitizer submitter verifier canary)
+ALIAS=("$(itl_kms_alias "$ENTORNO" raw)" "$(itl_kms_alias "$ENTORNO" clean)")
 
 REGISTRO="${RAIZ}/dist/limpieza-${ENTORNO}-$(date +%Y%m%dT%H%M%S).log"
 mkdir -p "${RAIZ}/dist"
@@ -106,7 +112,7 @@ paso "Comprobacion previa · lotes en vuelo"
 EN_VUELO="$("${AWS[@]}" dynamodb scan --table-name "$TABLA" \
   --filter-expression "#s IN (:e, :t)" \
   --expression-attribute-names '{"#s":"status"}' \
-  --expression-attribute-values '{":e":{"S":"enviado"},":t":{"S":"terminado"}}' \
+  --expression-attribute-values '{":e":{"S":"submitted"},":t":{"S":"completed"}}' \
   --query 'Count' 2>/dev/null || echo "sin-tabla")"
 
 if [[ "$EN_VUELO" == "sin-tabla" ]]; then
@@ -117,11 +123,11 @@ else
   ojo "${EN_VUELO} lote(s) en Anthropic ahora mismo"
   printf '\n    Esos lotes se estan facturando y su resultado se perderia: la\n'
   printf '    tabla nueva no sabra que existen. Espera a que lleguen a\n'
-  printf '    "entregado" antes de cortar.\n\n'
+  printf '    "delivered" antes de cortar.\n\n'
   printf '      aws dynamodb scan --table-name %s --region %s \\\n' "$TABLA" "$REGION"
   printf "        --filter-expression '#s IN (:e, :t)' \\\\\n"
   printf "        --expression-attribute-names '{\"#s\":\"status\"}' \\\\\n"
-  printf "        --expression-attribute-values '{\":e\":{\"S\":\"enviado\"},\":t\":{\"S\":\"terminado\"}}'\n"
+  printf "        --expression-attribute-values '{\":e\":{\"S\":\"submitted\"},\":t\":{\"S\":\"completed\"}}'\n"
   [[ $FORZAR -eq 1 ]] || die "aborto. Si de verdad quieres perderlos, repite con --forzar"
   ojo "--forzar dado: sigo pese a los lotes en vuelo"
 fi
@@ -170,16 +176,45 @@ vaciar_bucket() {
   echo "$borrados"
 }
 
+# Las dos paginaciones que usa s3_contar_bucket. Van contra la CLI de verdad;
+# la prueba las sustituye por paginas fijas para poder comprobar el recuento
+# sin AWS delante.
+# '--no-paginate' es lo que hace que la respuesta llegue tal cual la da S3,
+# con IsTruncated y los NextMarker. Sin el, la CLI pagina por su cuenta y
+# devuelve un NextToken propio: los marcadores desaparecen y este bucle no
+# tendria por donde seguir.
+s3_pagina_versiones() {  # <bucket> <key-marker> <version-id-marker>
+  local args=(s3api list-object-versions --bucket "$1" --max-keys 1000 --no-paginate)
+  [[ -n "${2:-}" ]] && args+=(--key-marker "$2")
+  [[ -n "${3:-}" ]] && args+=(--version-id-marker "$3")
+  "${AWS[@]}" "${args[@]}" 2>/dev/null || echo '{}'
+}
+
+s3_pagina_multipart() {  # <bucket> <key-marker> <upload-id-marker>
+  local args=(s3api list-multipart-uploads --bucket "$1" --max-uploads 1000 --no-paginate)
+  [[ -n "${2:-}" ]] && args+=(--key-marker "$2")
+  [[ -n "${3:-}" ]] && args+=(--upload-id-marker "$3")
+  "${AWS[@]}" "${args[@]}" 2>/dev/null || echo '{}'
+}
+
 for bucket in "${BUCKETS[@]}"; do
   if ! "${AWS[@]}" s3api head-bucket --bucket "$bucket" >/dev/null 2>&1; then
     dato "${bucket} — no existe"
     continue
   fi
-  n="$("${AWS[@]}" s3api list-object-versions --bucket "$bucket" --max-keys 1000 \
-        --query 'length(([Versions, DeleteMarkers] | flatten | [?@ != `null`]) || `[]`)' 2>/dev/null || echo 0)"
-  sufijo=""; [[ "$n" == "1000" ]] && sufijo="+ (hay mas)"
   if [[ $BORRAR -eq 0 ]]; then
-    ojo "${bucket} — ${n}${sufijo} objetos/versiones que hay que vaciar"
+    # Se cuentan las cuatro cosas por separado y con paginacion completa. Un
+    # solo numero agregado fue lo que produjo el falso negativo: decia 0 y
+    # despues S3 rechazaba el delete-bucket con BucketNotEmpty.
+    read -r n_act n_ant n_mrk n_mpu <<<"$(s3_contar_bucket "$bucket")"
+    total=$(( n_act + n_ant + n_mrk + n_mpu ))
+    if [[ $total -eq 0 ]]; then
+      bien "${bucket} — vacio, el destroy no se atascara"
+    else
+      ojo "${bucket} — ${total} cosa(s) que hay que vaciar"
+      printf '        %sversiones actuales %s · no actuales %s · marcas de borrado %s · multipart a medias %s%s\n' \
+        "$D" "$n_act" "$n_ant" "$n_mrk" "$n_mpu" "$R"
+    fi
   else
     printf '    vaciando %s …\n' "$bucket"
     vaciar_bucket "$bucket" >/dev/null
@@ -226,7 +261,7 @@ fi
 # ---------------------------------------------------------------------------
 paso "Log groups"
 for f in "${FUNCIONES[@]}"; do
-  lg="/aws/lambda/${P}-${f}"
+  lg="$(itl_log_group "$ENTORNO" "$f")"
   if "${AWS[@]}" logs describe-log-groups --log-group-name-prefix "$lg" \
        --query 'logGroups[?logGroupName==`'"$lg"'`]' | jq -e 'length > 0' >/dev/null 2>&1; then
     if [[ $BORRAR -eq 0 ]]; then
@@ -255,8 +290,9 @@ if [[ $TODO -eq 0 ]]; then
 else
   ojo "--todo dado: borro tambien lo que Terraform habria destruido"
   for f in "${FUNCIONES[@]}"; do
-    "${AWS[@]}" lambda delete-function --function-name "${P}-${f}" >/dev/null 2>&1 \
-      && { bien "lambda ${P}-${f}"; anota "lambda borrada ${P}-${f}"; } || true
+    fn="$(itl_lambda "$ENTORNO" "$f")"
+    "${AWS[@]}" lambda delete-function --function-name "$fn" >/dev/null 2>&1 \
+      && { bien "lambda ${fn}"; anota "lambda borrada ${fn}"; } || true
   done
   for a in "${ALIAS[@]}"; do
     # SOLO el alias. La clave se queda: borrarla dejaria ilegible todo lo que
@@ -265,7 +301,7 @@ else
       && { bien "alias ${a} (la clave NO se toca)"; anota "kms alias borrado ${a}"; } || true
   done
   for r in "${ROLES[@]}"; do
-    rol="${P}-${r}"
+    rol="$(itl_role "$ENTORNO" "$r")"
     "${AWS[@]}" iam list-attached-role-policies --role-name "$rol" \
       --query 'AttachedPolicies[].PolicyArn' --output text 2>/dev/null \
       | tr '\t' '\n' | while read -r arn; do
@@ -303,7 +339,8 @@ printf '    ilegible todo lo cifrado con ella, y el borrado de una CMK tiene\n'
 printf '    ademas una espera de 7 a 30 dias que no se puede deshacer.\n\n'
 printf '    %sEl secreto de Anthropic.%s No cambia de nombre y volver a meter la\n' "$B" "$R"
 printf '    clave exige que la teclee una persona.\n\n'
-printf '    %sEl rol de CI (%s-rol-ci).%s Es el que usa GitHub para desplegar, y\n' "$B" "$P" "$R"
+printf '    %sEl rol de CI (%s).%s Es el que usa GitHub para desplegar, y\n' \
+  "$B" "$(itl_role "$ENTORNO" ci)" "$R"
 printf '    puede ser el que estas usando ahora mismo. Que lo renombre Terraform,\n'
 printf '    y acuerdate de actualizar AWS_ROLE_DEV en el entorno dev de GitHub.\n\n'
 printf '    %sEl proveedor OIDC de la cuenta.%s Es compartido con otros proyectos.\n' "$B" "$R"

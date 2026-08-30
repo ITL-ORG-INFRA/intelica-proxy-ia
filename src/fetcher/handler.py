@@ -85,15 +85,15 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         except AttributeError:
             return 900_000
 
-    terminados = store.by_status(Status.COMPLETED, limit=50)
-    terminados.sort(key=lambda b: b.get("terminado_en", "") or b.get("created_at", ""))
+    completed = store.by_status(Status.COMPLETED, limit=50)
+    completed.sort(key=lambda b: b.get("ended_at", "") or b.get("created_at", ""))
 
-    resumen = {"bajados": 0, "descartados_con_pan": 0, "descartados_schema": 0,
-               "failed_count": 0, "pendientes": 0}
+    resumen = {"fetched": 0, "discarded_with_pan": 0, "discarded_schema": 0,
+               "failed_count": 0, "pending": 0}
 
-    for batch in terminados[:FETCH_MAX_PER_TICK]:
+    for batch in completed[:FETCH_MAX_PER_TICK]:
         if remaining_ms() < MIN_MS_PER_BATCH:
-            resumen["pendientes"] += 1
+            resumen["pending"] += 1
             log.warning("sin tiempo para otro lote, queda para el siguiente tick")
             break
         try:
@@ -101,7 +101,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         except AnthropicError as exc:
             resumen["failed_count"] += 1
             log.error("Anthropic fallo al bajar resultados", extra={
-                "ctx_batch_id": batch["batch_id"], "ctx_codigo": exc.codigo})
+                "ctx_batch_id": batch["batch_id"], "ctx_code": exc.code})
         except Exception:  # noqa: BLE001 — un lote roto no tumba el tick
             resumen["failed_count"] += 1
             log.exception("fallo bajando el lote", extra={"ctx_batch_id": batch["batch_id"]})
@@ -118,8 +118,8 @@ def _process(batch: Dict[str, Any], resumen: Dict[str, int]) -> None:
     tmp_path = f"/tmp/{batch_id}.jsonl"
     key_ = f"results/{batch_id}.jsonl"
     counters = {"succeeded": 0, "errored": 0, "canceled": 0, "expired": 0}
-    con_pan: List[Dict[str, Any]] = []
-    schema_malo = 0
+    with_pan: List[Dict[str, Any]] = []
+    bad_schema = 0
     escritas = 0
     bytes_escritos = 0
 
@@ -130,7 +130,7 @@ def _process(batch: Dict[str, Any], resumen: Dict[str, int]) -> None:
             for entry in stream_results(remote_id):
                 problema = _validates_schema(entry)
                 if problema:
-                    schema_malo += 1
+                    bad_schema += 1
                     continue
 
                 type = entry["result"].get("type", "errored")
@@ -141,7 +141,7 @@ def _process(batch: Dict[str, Any], resumen: Dict[str, int]) -> None:
                 for where, text in _texts_from_result(entry):
                     findings.extend(scan_text(normalize(text), where))
                 if findings:
-                    con_pan.append({
+                    with_pan.append({
                         "custom_id": entry["custom_id"],
                         "findings": [h.as_dict() for h in findings],
                     })
@@ -163,28 +163,28 @@ def _process(batch: Dict[str, Any], resumen: Dict[str, int]) -> None:
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
 
-    if con_pan:
+    if with_pan:
         # Que vuelva un PAN significa que el control de ida fallo. Severidad alta.
-        _metric("PanInResults", len(con_pan))
+        _metric("PanInResults", len(with_pan))
         log.error("resultados descartados por contener PAN", extra={
-            "ctx_batch_id": batch_id, "ctx_descartados": len(con_pan)})
+            "ctx_batch_id": batch_id, "ctx_discarded": len(with_pan)})
         _s3.put_object(
-            Bucket=RESULTS_BUCKET, Key=f"results/{batch_id}.descartados.json",
-            Body=json.dumps({"batch_id": batch_id, "descartados": con_pan},
+            Bucket=RESULTS_BUCKET, Key=f"results/{batch_id}.discarded.json",
+            Body=json.dumps({"batch_id": batch_id, "discarded": with_pan},
                             ensure_ascii=False).encode("utf-8"),
             ContentType="application/json")
 
     store.release(batch_id, int(batch.get("request_count", 0)))
     store.update(batch_id, status=Status.DELIVERED, results_key=key_,
                  results_bytes=bytes_escritos, result_counts=counters,
-                 entries_written=escritas, descartadas_con_pan=len(con_pan),
-                 descartadas_schema=schema_malo, entregado_en=store.now_iso())
+                 entries_written=escritas, discarded_with_pan=len(with_pan),
+                 discarded_schema=bad_schema, delivered_at=store.now_iso())
 
-    resumen["bajados"] += 1
-    resumen["descartados_con_pan"] += len(con_pan)
-    resumen["descartados_schema"] += schema_malo
+    resumen["fetched"] += 1
+    resumen["discarded_with_pan"] += len(with_pan)
+    resumen["discarded_schema"] += bad_schema
     _metric("BatchesDelivered", 1)
     log.info("lote entregado", extra={
         "ctx_batch_id": batch_id, "ctx_entries": escritas,
         "ctx_bytes": bytes_escritos,
-        "ctx_segundos": round(time.monotonic() - started, 1)})
+        "ctx_seconds": round(time.monotonic() - started, 1)})

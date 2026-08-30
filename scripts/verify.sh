@@ -18,8 +18,10 @@ set -Eeuo pipefail
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST="${RAIZ}/dist"
 
+# shellcheck source=scripts/lib/nombres.sh
+source "${RAIZ}/scripts/lib/nombres.sh"
+
 ENTORNO="${1:-}"
-PROYECTO="${PROYECTO:-intelica-proxy-ia}"
 REGION="${AWS_REGION:-eu-south-2}"
 
 paso() { printf '\n\033[34m==>\033[0m \033[1m%s\033[0m\n' "$*"; }
@@ -29,8 +31,7 @@ die()  { printf '\n\033[31merror:\033[0m %s\n' "$*" >&2; exit 1; }
 [[ -d "$DIST" ]] || die "no existe dist/ — corre antes ./scripts/build.sh"
 
 AWS=(aws --region "$REGION" --output json)
-P="${PROYECTO}-${ENTORNO}"
-FUNCIONES=(sanitizer verifier submitter reconciler fetcher canary)
+FUNCIONES=("${ITL_FUNCTIONS[@]}")
 
 paso "Comparando ${ENTORNO} con dist/"
 printf '    %-16s %-10s %s\n' "FUNCION" "ESTADO" "DETALLE"
@@ -38,7 +39,7 @@ printf '    %-16s %-10s %s\n' "----------------" "----------" "-------"
 
 desviados=0
 for f in "${FUNCIONES[@]}"; do
-  nombre="${P}-${f}"
+  nombre="$(itl_lambda "$ENTORNO" "$f")"
   zipfile="${DIST}/${f}.zip"
 
   if [[ ! -f "$zipfile" ]]; then

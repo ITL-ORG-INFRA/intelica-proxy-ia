@@ -4,6 +4,12 @@ Lo que importa comprobar aqui no es el camino feliz, es que los DOS caminos
 —el evento del manifiesto y el barrido programado— convergen sin enviar el
 lote dos veces, y que un lote incompleto espera en vez de enviarse a medias.
 
+Y desde el cambio de flujo, una cosa mas: las partes se suben a RAW y el
+manifiesto a CLEAN, bajo la misma carpeta 'input/<lote>'. El submitter no
+puede leer raw, asi que tiene que sacar el bucket del evento — si lo diera por
+supuesto, el lote moriria como "manifiesto ilegible" apuntando a un bucket
+sobre el que ni siquiera tiene permiso.
+
     .venv/bin/python tests/manifiesto_test.py
 """
 import json
@@ -79,6 +85,13 @@ def manifest(files, total=0):
                        "files": files, "total_requests": total}).encode()
 
 
+def put_manifest(s3, folder, files, total=0):
+    """El manifiesto vive en CLEAN, no en raw. Devuelve su evento de S3."""
+    key = f"{folder}/_MANIFEST.json"
+    s3.put_object(Bucket=CLEAN, Key=key, Body=manifest(files, total))
+    return s3_event(CLEAN, key)
+
+
 def main():
     s3, table_, cw = FakeS3(), FakeTable(), FakeCloudWatch()
     claves_vistas = []
@@ -145,12 +158,13 @@ def main():
         import store as store2
         submitter.create_batch = create_fake_batch
 
-        print("\n[3] manifiesto con todas las partes listas -> envia")
+        print("\n[3] manifiesto en CLEAN con todas las partes listas -> envia")
         # El manifiesto de [1] listaba una sola parte; ahora se sube el real,
-        # con las dos que el sanitizer ya proceso.
-        s3.put_object(Bucket=RAW, Key=f"{BATCH}/_MANIFEST.json",
-                      Body=manifest(["parte-01.json", "parte-02.json"], 4))
-        r = submitter.lambda_handler(s3_event(RAW, f"{BATCH}/_MANIFEST.json"), Ctx())
+        # con las dos que el sanitizer ya proceso. Y va a clean, no a raw.
+        evento = put_manifest(s3, BATCH, ["parte-01.json", "parte-02.json"], 4)
+        ck("el manifiesto esta en clean, no en raw",
+           f"{BATCH}/_MANIFEST.json" in s3.keys_of(CLEAN), s3.keys_of(CLEAN))
+        r = submitter.lambda_handler(evento, Ctx())
         ck("estado enviado", r.get("status") == "submitted", r)
         ck("4 peticiones fusionadas", r.get("requests") == 4, r)
         ck("una sola llamada a Anthropic", len(submitted) == 1, len(submitted))
@@ -158,7 +172,7 @@ def main():
         print("\n[4] el segundo camino NO reenvia")
         # Aqui esta la carrera: el barrido corre despues del evento. Sin la
         # reclamacion condicional, el lote se enviaria dos veces.
-        r2 = submitter.lambda_handler(s3_event(RAW, f"{BATCH}/_MANIFEST.json"), Ctx())
+        r2 = submitter.lambda_handler(s3_event(CLEAN, f"{BATCH}/_MANIFEST.json"), Ctx())
         ck("el reintento no envia", r2.get("status") != "submitted", r2)
         ck("sigue habiendo UNA sola llamada", len(submitted) == 1, len(submitted))
         barrido = submitter.sweep_pending()
@@ -166,9 +180,7 @@ def main():
 
         print("\n[5] manifiesto que llega ANTES de que el sanitizer acabe")
         OTHER = "input/lote-parcial"
-        s3.put_object(Bucket=RAW, Key=f"{OTHER}/_MANIFEST.json",
-                      Body=manifest(["a.json", "b.json"]))
-        r = submitter.lambda_handler(s3_event(RAW, f"{OTHER}/_MANIFEST.json"), Ctx())
+        r = submitter.lambda_handler(put_manifest(s3, OTHER, ["a.json", "b.json"]), Ctx())
         ck("queda esperando partes", r.get("status") == "awaiting_parts", r)
         ck("no envia nada", len(submitted) == 1, len(submitted))
         ck("dice cuantas faltan", r.get("expected") == 2 and r.get("clean", 0) == 0, r)
@@ -185,18 +197,16 @@ def main():
 
         print("\n[7] una parte en cuarentena tumba el lote entero")
         BAD = "input/lote-sucio"
-        s3.put_object(Bucket=RAW, Key=f"{BAD}/_MANIFEST.json",
-                      Body=manifest(["ok.json", "malo.json"]))
         store2.record_part(BAD, f"{BAD}/ok.json", cleaned=True)
         store2.record_part(BAD, f"{BAD}/malo.json", cleaned=False)
-        r = submitter.lambda_handler(s3_event(RAW, f"{BAD}/_MANIFEST.json"), Ctx())
+        r = submitter.lambda_handler(
+            put_manifest(s3, BAD, ["ok.json", "malo.json"]), Ctx())
         ck("lote en cuarentena", r.get("status") == "quarantined", r)
         ck("no se envio la parte limpia", len(submitted) == 2, len(submitted))
 
         print("\n[8] custom_id duplicado entre partes")
         DUP = "input/lote-dup"
-        s3.put_object(Bucket=RAW, Key=f"{DUP}/_MANIFEST.json",
-                      Body=manifest(["x.json", "y.json"]))
+        evento_dup = put_manifest(s3, DUP, ["x.json", "y.json"])
         store2.record_part(DUP, f"{DUP}/x.json", cleaned=True,
                                clean_key=f"clean/{DUP}/x.json")
         store2.record_part(DUP, f"{DUP}/y.json", cleaned=True,
@@ -208,9 +218,9 @@ def main():
             "messages": [{"role": "user", "content": "hola"}]}}]}).encode()
         s3.put_object(Bucket=CLEAN, Key=f"clean/{DUP}/x.json", Body=mismo)
         s3.put_object(Bucket=CLEAN, Key=f"clean/{DUP}/y.json", Body=mismo)
-        r = submitter.lambda_handler(s3_event(RAW, f"{DUP}/_MANIFEST.json"), Ctx())
+        r = submitter.lambda_handler(evento_dup, Ctx())
         ck("lote fallido", r.get("status") == "failed", r)
-        ck("nombra el id duplicado", r.get("custom_id_duplicado") == "colision", r)
+        ck("nombra el id duplicado", r.get("duplicate_custom_id") == "colision", r)
         ck("no se envio", len(submitted) == 2, len(submitted))
 
         print("\n[9] claves con '+': EventBridge NO las codifica")
@@ -224,8 +234,8 @@ def main():
         ck("el sanitizer conserva el '+'", r == MORE, r)
 
         MORE_MAN = "input/lote+2026/_MANIFEST.json"
-        s3.put_object(Bucket=RAW, Key=MORE_MAN, Body=manifest(["parte-01.json"]))
-        r = submitter.lambda_handler(s3_event(RAW, MORE_MAN), Ctx())
+        s3.put_object(Bucket=CLEAN, Key=MORE_MAN, Body=manifest(["parte-01.json"]))
+        r = submitter.lambda_handler(s3_event(CLEAN, MORE_MAN), Ctx())
         ck("el submitter no corrompe el lote",
            r.get("batch") == "input/lote+2026", r)
         ck("y NO dice que el manifiesto es ilegible",
@@ -241,14 +251,57 @@ def main():
            submitter._key_from_event(evento_records) == "input/lote 2026/parte-01.json",
            submitter._key_from_event(evento_records))
         ck("EventBridge: '+' se queda",
-           submitter._key_from_event(s3_event(RAW, MORE_MAN)) == MORE_MAN,
-           submitter._key_from_event(s3_event(RAW, MORE_MAN)))
+           submitter._key_from_event(s3_event(CLEAN, MORE_MAN)) == MORE_MAN,
+           submitter._key_from_event(s3_event(CLEAN, MORE_MAN)))
 
         print("\n[11] manifiesto ilegible")
         BROKEN = "input/lote-roto"
-        s3.put_object(Bucket=RAW, Key=f"{BROKEN}/_MANIFEST.json", Body=b"{no es json")
-        r = submitter.lambda_handler(s3_event(RAW, f"{BROKEN}/_MANIFEST.json"), Ctx())
+        s3.put_object(Bucket=CLEAN, Key=f"{BROKEN}/_MANIFEST.json", Body=b"{no es json")
+        r = submitter.lambda_handler(s3_event(CLEAN, f"{BROKEN}/_MANIFEST.json"), Ctx())
         ck("lo marca fallido sin reventar", r.get("error") == "manifiesto ilegible", r)
+
+        print("\n[12] el bucket sale del EVENTO, no de una constante")
+        # Es lo que permite que las partes esten en raw y el manifiesto en
+        # clean. Si el submitter diera por supuesto el bucket, aqui leeria del
+        # sitio equivocado y el lote moriria como "manifiesto ilegible".
+        bucket, key = submitter._source_from_event(
+            s3_event(CLEAN, f"{BATCH}/_MANIFEST.json"))
+        ck("EventBridge: bucket y key del evento",
+           (bucket, key) == (CLEAN, f"{BATCH}/_MANIFEST.json"), (bucket, key))
+        bucket, key = submitter._source_from_event({"Records": [{"s3": {
+            "bucket": {"name": CLEAN},
+            "object": {"key": "input/x/_MANIFEST.json", "eTag": "e"}}}]})
+        ck("Records: bucket y key del evento",
+           (bucket, key) == (CLEAN, "input/x/_MANIFEST.json"), (bucket, key))
+        ck("un tick sin evento de S3 no trae bucket ni key",
+           submitter._source_from_event({"source": "aws.events"}) == ("", ""),
+           submitter._source_from_event({"source": "aws.events"}))
+
+        print("\n[13] el manifiesto tiene que terminar EXACTAMENTE en _MANIFEST.json")
+        # 'x_MANIFEST.json.bak' o 'MANIFEST.json' no cierran un lote. Si los
+        # aceptara, un fichero de respaldo dispararia un envio a medias.
+        for clave, cierra in (("input/l/_MANIFEST.json", True),
+                              ("input/l/_MANIFEST.json.bak", False),
+                              ("input/l/MANIFEST.json", False),
+                              ("input/l/_manifest.json", False)):
+            ck(f"{clave} {'cierra' if cierra else 'NO cierra'} el lote",
+               clave.endswith(submitter.MANIFEST) is cierra, clave)
+
+        print("\n[14] el barrido cierra un lote que ya no puede avanzar")
+        # Regresion: el contador de lotes cerrados se incrementaba sobre una
+        # clave que no existia en el diccionario. No fallaba en el camino
+        # feliz —solo se llega aqui cuando un lote pendiente ya no puede
+        # avanzar— pero cuando se llegaba, el barrido entero moria con un
+        # KeyError y se llevaba por delante los lotes que si podian enviarse.
+        STUCK = "input/lote-atascado"
+        store2.mark_batch(STUCK, store2.BatchState.READY)
+        try:
+            barrido = submitter.sweep_pending()
+            ck("el barrido no revienta", True)
+            ck("y cuenta el lote como cerrado", barrido.get("closed", 0) >= 1,
+               barrido)
+        except KeyError as exc:
+            ck("el barrido no revienta", False, f"KeyError: {exc}")
 
     shutil.rmtree(pkg_san, ignore_errors=True)
     shutil.rmtree(pkg_sub, ignore_errors=True)

@@ -20,9 +20,9 @@ ninguna persona**. No hay titular. No hay saldo. No se pueden usar para nada.
 
 Podrían vivir en un secreto o en un bucket. Sería peor:
 
-- **El canario tiene que plantarlos.** Es la única prueba falsable de que el
+- **El canary tiene que plantarlos.** Es la única prueba falsable de que el
   sanitizer bloquea. Si los números vivieran fuera del código, un fallo al leerlos
-  haría que el canario plantara un lote vacío y **la prueba pasaría sin probar
+  haría que el canary plantara un lote vacío y **la prueba pasaría sin probar
   nada** — el peor fallo posible en un control de seguridad.
 - **Las pruebas tienen que ser legibles.** Un caso de prueba que dice
   `pan_de_prueba_3` no le dice a nadie qué rama del detector está ejercitando.
@@ -41,7 +41,7 @@ no borrarlos.
 
 Ficheros afectados:
 
-- `src/canary/cases.py` — los siete señuelos que planta el canario
+- `src/canary/cases.py` — los siete señuelos que planta el canary
 - `tests/detectores_test.py` — catorce tarjetas, una por marca y longitud
 - `tests/detection2_test.py` — las mismas, para comparar las dos implementaciones
 - `tests/e2e_test.py` — un lote con un PAN, para comprobar que el gate aborta

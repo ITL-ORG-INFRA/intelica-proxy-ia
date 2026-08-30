@@ -1,4 +1,4 @@
-"""λ RECONCILIADOR — polling con cabeza.
+"""λ RECONCILER — polling con cabeza.
 
 No hay webhooks en la Batches API: el polling es el unico mecanismo. Y no es
 el cuello de botella, siempre que se haga bien:
@@ -82,7 +82,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     if not pending_items:
         # Nadie toca. Esto es la cadencia adaptativa haciendo su trabajo:
         # el tick corre, no gasta ni una peticion.
-        log.info("tick sin consulta", extra={"ctx_en_vuelo": len(in_flight)})
+        log.info("tick sin consulta", extra={"ctx_in_flight": len(in_flight)})
         _metric("TicksWithoutPoll", 1)
         return {"skipped": "ninguno toca todavia", "in_flight": len(in_flight)}
 
@@ -91,23 +91,23 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     try:
         after_id = None
         for _ in range(5):  # tope de paginas, por si acaso
-            batches, hay_mas, headers = list_batches(limit=100, after_id=after_id)
+            batches, has_more, headers = list_batches(limit=100, after_id=after_id)
             store.save_ratelimit(headers)
             for remote in batches:
                 remotes[remote["id"]] = remote
-            if not hay_mas or not batches:
+            if not has_more or not batches:
                 break
             after_id = batches[-1]["id"]
     except AnthropicError as exc:
         if exc.retry_after:
             store.save_ratelimit({"retry-after": str(exc.retry_after)})
         _metric("PollsFailed", 1)
-        log.error("no se pudo listar", extra={"ctx_codigo": exc.codigo})
-        return {"error": exc.codigo}
+        log.error("no se pudo listar", extra={"ctx_code": exc.code})
+        return {"error": exc.code}
 
     _metric("PollsPerformed", 1)
 
-    terminados, expirados, sin_noticias = 0, 0, 0
+    completed, expired, unknown = 0, 0, 0
     now = store.now_iso()
 
     for batch in pending_items:
@@ -116,7 +116,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         remote = remotes.get(remote_id)
 
         if not remote:
-            sin_noticias += 1
+            unknown += 1
             store.update(batch_id, polled_at=now)
             continue
 
@@ -125,9 +125,9 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
         if state == "ended":
             store.update(batch_id, status=Status.COMPLETED, polled_at=now,
-                         terminado_en=remote.get("ended_at"), request_counts=counters,
-                         results_url_disponible=bool(remote.get("results_url")))
-            terminados += 1
+                         ended_at=remote.get("ended_at"), request_counts=counters,
+                         results_url_available=bool(remote.get("results_url")))
+            completed += 1
             log.info("lote terminado en Anthropic", extra={
                 "ctx_batch_id": batch_id, "ctx_anthropic_id": remote_id})
             continue
@@ -138,16 +138,16 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             store.release(batch_id, int(batch.get("request_count", 0)))
             store.update(batch_id, status=Status.EXPIRED, polled_at=now,
                          reason=f"sin terminar tras {BATCH_EXPIRY_HOURS} h")
-            expirados += 1
+            expired += 1
             _metric("BatchesExpired", 1)
             log.error("lote expirado", extra={"ctx_batch_id": batch_id})
             continue
 
         store.update(batch_id, polled_at=now, request_counts=counters)
 
-    _metric("BatchesCompleted", terminados)
-    resumen = {"polled": len(pending_items), "terminados": terminados,
-               "expirados": expirados, "sin_noticias": sin_noticias,
+    _metric("BatchesCompleted", completed)
+    resumen = {"polled": len(pending_items), "completed": completed,
+               "expired": expired, "unknown": unknown,
                "in_flight": len(in_flight),
                "ms": round((time.monotonic() - started) * 1000)}
     log.info("tick de reconciliacion", extra={f"ctx_{k}": v for k, v in resumen.items()})

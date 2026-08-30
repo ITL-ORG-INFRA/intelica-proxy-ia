@@ -19,6 +19,30 @@ permissions:
   contents: read
   id-token: write
 
+# ---------------------------------------------------------------------------
+# ANTES DEL PRIMER DESPLIEGUE CON LA NOMENCLATURA NUEVA
+#
+# Hay que actualizar A MANO el ARN del rol de CI. Este workflow NO lo cambia
+# solo, y no puede: es configuracion del repositorio, no codigo.
+#
+# NO cambia el NOMBRE de la variable, solo su VALOR. Las dos formas de
+# configurarla siguen valiendo, y se miran en este orden:
+#
+#   1. variable AWS_ROLE dentro del environment (Settings -> Environments ->
+#      dev -> Variables). Es la que gana si esta puesta.
+#   2. variable AWS_ROLE_DEV a nivel de repositorio (Settings -> Secrets and
+#      variables -> Actions). Solo se usa si la de arriba esta vacia.
+#
+# Sea cual sea la que uses, el valor nuevo es:
+#
+#   arn:aws:iam::891376942769:role/itl-0003-proxy-ia-dev-role-ci-03
+#
+# Si se queda apuntando al rol viejo, el despliegue falla al asumir el rol con
+# un error de OIDC que NO menciona el nombre del rol — se pierde una tarde
+# revisando la trust policy de un rol que ya no existe. El paso "Resolver el
+# rol a asumir" imprime de cual de las dos lo tomo, para no adivinarlo.
+# ---------------------------------------------------------------------------
+
 # Que entornos estan activos lo dice la variable de repositorio
 # ENTORNOS_ACTIVOS, por ejemplo "dev" o "dev,qa,prod". Sin ella se asume que
 # solo hay dev.

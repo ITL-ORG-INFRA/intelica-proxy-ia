@@ -5,13 +5,13 @@ quien lo retome.
 
 ## Qué problema resuelve
 
-Hoy el reconciliador y el fetcher se despiertan cada 5 minutos aunque no haya
+Hoy el reconciler y el fetcher se despiertan cada 5 minutos aunque no haya
 nada que hacer: 576 invocaciones al día que casi siempre salen en 130 ms sin
 llamar a Anthropic. El coste es despreciable (0,14 % de la capa gratuita), así
 que **no se hace por ahorro**. Se hace por dos razones concretas:
 
 1. **Latencia.** Entre que Anthropic acaba y el JSONL aparece en S3 hay hasta
-   10 minutos: cinco en que el reconciliador se entere, y otros cinco hasta el
+   10 minutos: cinco en que el reconciler se entere, y otros cinco hasta el
    siguiente tick del fetcher.
 2. **El estado del trabajo pendiente vive en un `if`** que lee DynamoDB, en vez
    de en algo que se pueda observar y que avise cuando algo se pierde.
@@ -60,7 +60,7 @@ SQS devolvería el mensaje a la cola a mitad, provocando una segunda descarga de
 mismo lote.
 
 No saber si la descarga funcionó no importa: el estado vive en DynamoDB, el lote
-se queda en `terminado` si el fetcher falla, y el barrido horario lo reintenta.
+se queda en `completed` si el fetcher falla, y el barrido horario lo reintenta.
 
 ## Cambios por fichero
 
@@ -84,7 +84,7 @@ pregunto por ése»*.
   pasa a ser el valor de `DelaySeconds` al reencolar: 300 s mientras el lote
   tenga menos de 60 minutos, 900 s después.
 - Sigue leyendo y persistiendo `retry-after` y los `anthropic-ratelimit-*`.
-- Sigue detectando la expiración a las 24 h y marcando `expirado`.
+- Sigue detectando la expiración a las 24 h y marcando `expired`.
 - **Conserva** el modo barrido para el tick horario: si el evento no trae
   `batch_id`, barre lotes en vuelo como hasta ahora.
 
@@ -97,8 +97,8 @@ Aceptar un `batch_id` concreto en el evento, además del barrido actual. La
 lógica de descarga no se toca.
 
 Añadir un **contador de intentos**: hoy, si la descarga falla, el lote se queda
-en `terminado` y se reintenta indefinidamente sin que nadie se entere. A partir
-de 5 intentos, marcar `fallido` con el motivo y emitir métrica.
+en `completed` y se reintenta indefinidamente sin que nadie se entere. A partir
+de 5 intentos, marcar `failed` con el motivo y emitir métrica.
 
 ```
 intentos_descarga: 3
@@ -134,13 +134,13 @@ cubrir:
 - El supervisor con `in_progress` reencola; con `ended` no.
 - El delay sube de 300 a 900 al pasar de 60 minutos.
 - El supervisor invoca al fetcher **asíncrono**.
-- A los 5 intentos fallidos, el lote pasa a `fallido` con motivo.
+- A los 5 intentos fallidos, el lote pasa a `failed` con motivo.
 - El barrido horario encuentra un lote en vuelo sin mensaje reciente.
 
 ## Qué NO cambia
 
 - La frontera CDE / zona limpia. Ningún rol gana acceso a datos de tarjeta.
-- El sanitizer, el verificador y el canario.
+- El sanitizer, el verifier y el canary.
 - El flujo del manifiesto.
 - El segundo pase de sanitización en el fetcher.
 
