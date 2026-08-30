@@ -56,7 +56,12 @@ aws dynamodb get-item --region eu-south-2 \
 
 ## Antes de subir nada
 
-El filtro se puede pasar en local, sin tocar AWS ni gastar nada:
+**Ya no hace falta acordarse**: `subir-lote.sh` pasa el filtro él solo antes de
+subir, y si alguna parte no cruzaría no sube ninguna. Un lote es una unidad, así
+que subir el resto sólo dejaría partes sueltas en `clean` que no se enviarían
+nunca, y dispararía `BatchesQuarantined` a quien recibe las alarmas.
+
+Para verlo por separado, sin tocar AWS ni gastar nada:
 
 ```bash
 python3 scripts/probar_filtro.py ejemplos/lote-multiparte/parte-*.json
@@ -64,3 +69,11 @@ python3 scripts/probar_filtro.py ejemplos/lote-multiparte/parte-*.json
 
 Las once peticiones deben salir limpias. Si alguna no lo hace, hay una
 regresión en el sanitizer — este lote no tiene nada que ocultar.
+
+Y si quieres subir a propósito algo que el filtro rechaza —para ver el veredicto
+real del sanitizer, que es lo que hace `probar-flujo.sh` con las suites de
+ejemplos— existe el escape:
+
+```bash
+./scripts/subir-lote.sh dev ejemplos/lote-multiparte --sin-filtro
+```

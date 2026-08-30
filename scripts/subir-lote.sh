@@ -21,9 +21,15 @@
 # productor lo escriba sin permiso de escritura sobre raw mas alla de las
 # partes, y que el submitter —que no puede leer raw— lo lea por si mismo.
 #
+# Antes de subir se pasa el filtro REAL —el mismo codigo que corre en Lambda—
+# sobre cada parte. Si alguna no cruzaria, no se sube ninguna: un lote es una
+# unidad, asi que subir el resto solo deja partes sueltas en clean que no se
+# enviaran nunca.
+#
 #   ./scripts/subir-lote.sh dev ./mi-carpeta
 #   ./scripts/subir-lote.sh dev ./mi-carpeta lote-agosto     nombre del lote
 #   ./scripts/subir-lote.sh dev ./mi-carpeta --solo-manifiesto   ver sin subir
+#   ./scripts/subir-lote.sh dev ./mi-carpeta --sin-filtro    subir sin comprobar
 # ---------------------------------------------------------------------------
 set -Eeuo pipefail
 
@@ -39,7 +45,13 @@ REGION="${AWS_REGION:-eu-south-2}"
 PREFIJO="${PREFIJO:-${ITL_PREFIX_INPUT%/}}"
 
 SOLO_MANIFIESTO=false
-[[ "$NOMBRE" == "--solo-manifiesto" ]] && { SOLO_MANIFIESTO=true; NOMBRE=""; }
+SIN_FILTRO=false
+for arg in "$@"; do
+  case "$arg" in
+    --solo-manifiesto) SOLO_MANIFIESTO=true; [[ "$NOMBRE" == "$arg" ]] && NOMBRE="" ;;
+    --sin-filtro)      SIN_FILTRO=true;      [[ "$NOMBRE" == "$arg" ]] && NOMBRE="" ;;
+  esac
+done
 
 if [[ -t 1 ]]; then
   R=$'\033[0m'; B=$'\033[1m'; D=$'\033[2m'
@@ -52,7 +64,8 @@ ok()   { printf '    %s✓%s %s\n' "$VERDE" "$R" "$*"; }
 dato() { printf '    %s·%s %s\n' "$D" "$R" "$*"; }
 die()  { printf '\n%serror:%s %s\n' "$ROJO" "$R" "$*" >&2; exit 1; }
 
-[[ "$ENTORNO" =~ ^(dev|qa|prod)$ ]] || die "uso: $0 <dev|qa|prod> <carpeta> [nombre-del-lote]"
+[[ "$ENTORNO" =~ ^(dev|qa|prod)$ ]] \
+  || die "uso: $0 <dev|qa|prod> <carpeta> [nombre-del-lote] [--solo-manifiesto] [--sin-filtro]"
 [[ -d "$CARPETA" ]] || die "no existe la carpeta: ${CARPETA:-<vacia>}"
 
 for bin in aws jq python3; do
@@ -108,6 +121,46 @@ if [[ -n "$DUPES" ]]; then
   die "Anthropic rechazaria el lote entero. Corrigelos antes de subir."
 fi
 ok "$TOTAL peticiones, todos los custom_id unicos"
+
+# --- las seis capas y el gate ----------------------------------------------
+# Se pasa el filtro REAL —el mismo handler que corre en Lambda, contra un S3 y
+# un DynamoDB simulados— antes de subir nada.
+#
+# No es un control de seguridad: raw esta DENTRO del CDE y esta hecho para
+# recibir CHD; el canary planta PANes ahi a proposito cada hora. Es que subir
+# un lote que va a acabar en cuarentena cuesta el viaje de ida, deja partes
+# sueltas en clean que no se enviaran nunca, y dispara BatchesQuarantined a
+# quien recibe las alarmas. Todo eso se sabe aqui, gratis y sin salir del
+# portatil.
+if $SIN_FILTRO; then
+  paso "Filtro local"
+  printf '    %s--sin-filtro: no se comprueba nada. Lo decide el sanitizer.%s\n' "$AMBAR" "$R"
+else
+  paso "Pasando el filtro local (las 6 capas y el gate)"
+  FILTRO=""
+  for candidato in "${RAIZ}/.venv/bin/python" python3 python; do
+    command -v "$candidato" >/dev/null 2>&1 && { FILTRO="$candidato"; break; }
+  done
+  [[ -n "$FILTRO" ]] || die "no hay interprete de Python para pasar el filtro.
+       Crea el venv (make venv) o repite con --sin-filtro."
+
+  if "$FILTRO" -c 'import boto3' 2>/dev/null; then
+    if "$FILTRO" "${RAIZ}/scripts/probar_filtro.py" "${PARTES[@]}" 2>&1 | sed 's/^/    /'; then
+      ok "las ${#PARTES[@]} partes cruzarian a la zona limpia"
+    else
+      die "el filtro rechazaria alguna parte, y un lote es una unidad: si una
+       cae, NO se envia ninguna. No se ha subido nada.
+
+       Arriba tienes que peticion y que capa. Si quieres subirlo igualmente
+       para ver el veredicto real, repite con --sin-filtro."
+    fi
+  else
+    # Fallar en frio y no seguir a ciegas: si el filtro no puede correr, quien
+    # sube tiene que saberlo y decidir, no enterarse por una alarma.
+    die "el interprete '${FILTRO}' no tiene boto3, asi que no se puede pasar el
+       filtro. Crea el venv (make venv) o repite con --sin-filtro."
+  fi
+fi
 
 # --- el manifiesto ---------------------------------------------------------
 MANIFIESTO="$(jq -nc \
