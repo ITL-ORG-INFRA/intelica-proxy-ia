@@ -377,25 +377,61 @@ sí produce daños silenciosos.
    a Cuotas que no suban durante la ventana.
 2. **Esperar a que se vacíe lo que está en vuelo** — la consulta del apartado 4
    debe devolver `0`. Es el único punto donde se puede perder trabajo de verdad.
-3. **Terraform**: recursos con la nomenclatura nueva, prefijos, métricas,
+3. **Limpiar lo que haría fallar el apply.** Desde el repo de código:
+
+   ```bash
+   ./scripts/limpiar-recursos-viejos.sh dev            # lista, no toca nada
+   ./scripts/limpiar-recursos-viejos.sh dev --borrar   # ejecuta
+   ```
+
+   Vacía los buckets, desactiva la protección de borrado de la tabla y quita los
+   log groups huérfanos. **Sin esto el `terraform apply` revienta a mitad** y
+   deja el sistema medio renombrado, que es el peor estado posible. El script
+   repite por su cuenta la comprobación del paso 2 y se niega a seguir si algo
+   sigue en vuelo. Ver «Por qué hace falta un paso manual» más abajo.
+4. **Terraform**: recursos con la nomenclatura nueva, prefijos, métricas,
    namespaces, IAM y variables de entorno. Todo en un solo apply.
-4. **Actualizar `AWS_ROLE_DEV`** en las variables del entorno `dev` de GitHub con
-   el ARN nuevo del rol de CI. Si no, el paso 5 falla con un error de OIDC que ni
+5. **Actualizar `AWS_ROLE_DEV`** en las variables del entorno `dev` de GitHub con
+   el ARN nuevo del rol de CI. Si no, el paso 6 falla con un error de OIDC que ni
    siquiera menciona el rol.
-5. **Desplegar el código** desde `intelica-proxy-ia` (merge a `main`), ya con los
+6. **Desplegar el código** desde `intelica-proxy-ia` (merge a `main`), ya con los
    nombres nuevos en los scripts.
-6. **Reconfirmar las suscripciones del SNS.** Cada destinatario tiene que pinchar
+7. **Reconfirmar las suscripciones del SNS.** Cada destinatario tiene que pinchar
    su enlace. Hasta entonces las alarmas suenan en el vacío.
-7. **Reactivar la ingesta** y comprobar (abajo).
+8. **Reactivar la ingesta** y comprobar (abajo).
 
 **Después, cuando el flujo lleve unos días bien:**
 
-8. Borrar los buckets y la tabla viejos. **No el mismo día**: son el único sitio
-   donde queda constancia de lo que pasó antes del corte.
+9. Borrar la tabla vieja, si Terraform no lo hizo ya. **No el mismo día**: es el
+   único sitio donde queda constancia de lo que pasó antes del corte. Los
+   buckets ya los vació el paso 3.
 
-Los pasos 3 y 5 no se pueden invertir: `publish.sh` falla si las funciones aún
-tienen el nombre viejo. Y no dejes el 5 para otro día — entre el 3 y el 5 las
+Los pasos 4 y 6 no se pueden invertir: `publish.sh` falla si las funciones aún
+tienen el nombre viejo. Y no dejes el 6 para otro día — entre el 4 y el 6 las
 Lambdas viejas siguen vivas escribiendo en recursos que ya nadie lee.
+
+### Por qué hace falta un paso manual antes del apply
+
+Terraform destruye y recrea sin problema las Lambdas, los roles, las reglas, las
+alarmas, el topic y el alias de KMS. Pero hay tres cosas que **no puede** y que
+hacen fallar el apply a mitad:
+
+| Qué | Por qué falla |
+|---|---|
+| Bucket con objetos | `force_destroy` viene a `false`. Y con versionado, un `s3 rm --recursive` **no basta**: deja vivas las versiones y las marcas de borrado, y el bucket sigue sin poder borrarse |
+| Tabla con `deletion_protection` | El destroy se rechaza sin más |
+| Log group que creó AWS solo | No está en el estado. Al crear el nuevo, Terraform choca con `ResourceAlreadyExistsException` |
+
+Un apply que falla en la mitad de eso deja la mitad de las Lambdas apuntando a
+buckets que ya no existen. **Es peor que no haber empezado**, y hacia atrás no
+hay botón. De ahí el paso 3.
+
+El script tiene además dos cosas que conviene saber: por defecto **sólo lista**
+—hay que pasar `--borrar` y teclear el nombre del entorno—, y **nunca toca las
+claves KMS, el secreto de Anthropic ni el rol de CI**. Las claves porque
+destruirlas dejaría ilegible todo lo cifrado con ellas y su borrado tiene una
+espera irreversible de 7 a 30 días; el rol de CI porque puede ser el que estés
+usando en ese momento.
 
 ## Cómo comprobar que quedó bien
 
