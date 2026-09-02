@@ -21,9 +21,22 @@
 # productor lo escriba sin permiso de escritura sobre raw mas alla de las
 # partes, y que el submitter —que no puede leer raw— lo lea por si mismo.
 #
+# Antes de subir se pasa el filtro REAL —el mismo codigo que corre en Lambda—
+# sobre cada parte. Si alguna no cruzaria, no se sube ninguna: un lote es una
+# unidad, asi que subir el resto solo deja partes sueltas en clean que no se
+# enviaran nunca.
+#
 #   ./scripts/subir-lote.sh dev ./mi-carpeta
 #   ./scripts/subir-lote.sh dev ./mi-carpeta lote-agosto     nombre del lote
-#   ./scripts/subir-lote.sh dev ./mi-carpeta --solo-manifiesto   ver sin subir
+#   ./scripts/subir-lote.sh dev ./mi-carpeta --dry-run       validar sin subir
+#   ./scripts/subir-lote.sh dev ./mi-carpeta --sin-filtro    subir sin comprobar
+#
+# Cada ejecucion deja evidencia local en:
+#   dist/logs/subir-lote/<fecha>-<pid>/ejecucion.log
+#   dist/logs/subir-lote/<fecha>-<pid>/filtro.log
+#
+# Los logs explican el rechazo sin copiar el contenido del payload: fichero,
+# indice de request, capa, tipo, ubicacion y recomendacion.
 # ---------------------------------------------------------------------------
 set -Eeuo pipefail
 
@@ -38,8 +51,57 @@ NOMBRE="${3:-}"
 REGION="${AWS_REGION:-eu-south-2}"
 PREFIJO="${PREFIJO:-${ITL_PREFIX_INPUT%/}}"
 
-SOLO_MANIFIESTO=false
-[[ "$NOMBRE" == "--solo-manifiesto" ]] && { SOLO_MANIFIESTO=true; NOMBRE=""; }
+# --- evidencia de la ejecucion --------------------------------------------
+# Se crea antes de validar argumentos para que incluso un fallo de uso, una
+# dependencia ausente o unas credenciales caducadas deje rastro. dist/ esta
+# ignorado por git y no se sube: los diagnosticos pueden describir hallazgos
+# sobre datos que siguen perteneciendo al productor.
+RAIZ_LOGS="${ITL_LOG_ROOT:-${RAIZ}/dist/logs/subir-lote}"
+
+# Un proceso exterior captura stdout y stderr con tee. No se usa
+# `exec > >(tee ...)`: depende de /dev/fd y falla en algunos runners y
+# sandboxes. PIPESTATUS conserva el resultado real del script, no el de tee.
+if [[ "${ITL_SUBIR_LOTE_LOG_ACTIVO:-false}" != "true" ]]; then
+  INICIO_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  ID_EJECUCION="$(date -u +%Y%m%dT%H%M%SZ)-$$"
+  LOG_DIR="${RAIZ_LOGS}/${ID_EJECUCION}"
+  LOG_EJECUCION="${LOG_DIR}/ejecucion.log"
+  mkdir -p "$LOG_DIR"
+  touch "${LOG_DIR}/filtro.log"
+  set +e
+  ITL_SUBIR_LOTE_LOG_ACTIVO=true \
+  ITL_SUBIR_LOTE_LOG_DIR="$LOG_DIR" \
+  ITL_SUBIR_LOTE_INICIO_UTC="$INICIO_UTC" \
+    "$0" "$@" 2>&1 | tee -a "$LOG_EJECUCION"
+  CODIGOS=("${PIPESTATUS[@]}")
+  CODIGO_SCRIPT="${CODIGOS[0]}"
+  CODIGO_TEE="${CODIGOS[1]}"
+  printf '\n[registro] fin_utc=%s codigo_salida=%s\n' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$CODIGO_SCRIPT" | tee -a "$LOG_EJECUCION"
+  printf '[registro] carpeta=%s\n' "$LOG_DIR" | tee -a "$LOG_EJECUCION"
+  [[ "$CODIGO_TEE" -eq 0 ]] || exit "$CODIGO_TEE"
+  exit "$CODIGO_SCRIPT"
+fi
+
+INICIO_UTC="${ITL_SUBIR_LOTE_INICIO_UTC}"
+LOG_DIR="${ITL_SUBIR_LOTE_LOG_DIR}"
+ID_EJECUCION="$(basename "$LOG_DIR")"
+LOG_FILTRO="${LOG_DIR}/filtro.log"
+
+printf '[registro] inicio_utc=%s ejecucion=%s entorno=%s carpeta_entrada=%s\n' \
+  "$INICIO_UTC" "$ID_EJECUCION" "${ENTORNO:-<vacio>}" "${CARPETA:-<vacia>}"
+printf '[registro] no se guarda el contenido de los JSON; solo diagnosticos\n'
+
+DRY_RUN=false
+SIN_FILTRO=false
+for arg in "$@"; do
+  case "$arg" in
+    --dry-run)         DRY_RUN=true; [[ "$NOMBRE" == "$arg" ]] && NOMBRE="" ;;
+    # Alias compatible con llamadas anteriores. Ya no se anuncia en la ayuda.
+    --solo-manifiesto) DRY_RUN=true; [[ "$NOMBRE" == "$arg" ]] && NOMBRE="" ;;
+    --sin-filtro)      SIN_FILTRO=true;      [[ "$NOMBRE" == "$arg" ]] && NOMBRE="" ;;
+  esac
+done
 
 if [[ -t 1 ]]; then
   R=$'\033[0m'; B=$'\033[1m'; D=$'\033[2m'
@@ -52,7 +114,10 @@ ok()   { printf '    %s✓%s %s\n' "$VERDE" "$R" "$*"; }
 dato() { printf '    %s·%s %s\n' "$D" "$R" "$*"; }
 die()  { printf '\n%serror:%s %s\n' "$ROJO" "$R" "$*" >&2; exit 1; }
 
-[[ "$ENTORNO" =~ ^(dev|qa|prod)$ ]] || die "uso: $0 <dev|qa|prod> <carpeta> [nombre-del-lote]"
+dato "logs de esta ejecucion: ${LOG_DIR}"
+
+[[ "$ENTORNO" =~ ^(dev|qa|prod)$ ]] \
+  || die "uso: $0 <dev|qa|prod> <carpeta> [nombre-del-lote] [--dry-run] [--sin-filtro]"
 [[ -d "$CARPETA" ]] || die "no existe la carpeta: ${CARPETA:-<vacia>}"
 
 for bin in aws jq python3; do
@@ -78,13 +143,15 @@ NOMBRES=()
 PROBLEMAS=0
 for ruta in "${PARTES[@]}"; do
   base="$(basename "$ruta")"
-  if ! jq empty "$ruta" 2>/dev/null; then
+  if ! ERROR_JSON="$(jq empty "$ruta" 2>&1)"; then
     printf '    %s✗%s %-28s no es JSON valido\n' "$ROJO" "$R" "$base"
+    printf '        %s\n' "$ERROR_JSON" | tee -a "$LOG_FILTRO"
     PROBLEMAS=$((PROBLEMAS + 1)); continue
   fi
   n="$(jq '(.requests // []) | length' "$ruta")"
   if [[ "$n" -eq 0 ]]; then
     printf '    %s✗%s %-28s sin array "requests"\n' "$ROJO" "$R" "$base"
+    printf '%s: sin array "requests" no vacio\n' "$base" >> "$LOG_FILTRO"
     PROBLEMAS=$((PROBLEMAS + 1)); continue
   fi
   bytes="$(wc -c < "$ruta" | tr -d ' ')"
@@ -104,10 +171,51 @@ DUPES="$(jq -r '.requests[].custom_id' "${PARTES[@]}" 2>/dev/null \
          | sort | uniq -d | head -5)"
 if [[ -n "$DUPES" ]]; then
   printf '    %s✗%s custom_id repetidos entre partes:\n' "$ROJO" "$R"
-  echo "$DUPES" | sed 's/^/        /'
+  printf '        %s\n' "${DUPES//$'\n'/$'\n        '}" | tee -a "$LOG_FILTRO"
   die "Anthropic rechazaria el lote entero. Corrigelos antes de subir."
 fi
 ok "$TOTAL peticiones, todos los custom_id unicos"
+
+# --- las seis capas y el gate ----------------------------------------------
+# Se pasa el filtro REAL —el mismo handler que corre en Lambda, contra un S3 y
+# un DynamoDB simulados— antes de subir nada.
+#
+# No es un control de seguridad: raw esta DENTRO del CDE y esta hecho para
+# recibir CHD; el canary planta PANes ahi a proposito cada hora. Es que subir
+# un lote que va a acabar en cuarentena cuesta el viaje de ida, deja partes
+# sueltas en clean que no se enviaran nunca, y dispara BatchesQuarantined a
+# quien recibe las alarmas. Todo eso se sabe aqui, gratis y sin salir del
+# portatil.
+if $SIN_FILTRO; then
+  paso "Filtro local"
+  printf '    %s--sin-filtro: no se comprueba nada. Lo decide el sanitizer.%s\n' "$AMBAR" "$R"
+else
+  paso "Pasando el filtro local (las 6 capas y el gate)"
+  FILTRO=""
+  for candidato in "${RAIZ}/.venv/bin/python" python3 python; do
+    command -v "$candidato" >/dev/null 2>&1 && { FILTRO="$candidato"; break; }
+  done
+  [[ -n "$FILTRO" ]] || die "no hay interprete de Python para pasar el filtro.
+       Crea el venv (make venv) o repite con --sin-filtro."
+
+  if "$FILTRO" -c 'import boto3' 2>/dev/null; then
+    if "$FILTRO" "${RAIZ}/scripts/probar_filtro.py" "${PARTES[@]}" 2>&1 \
+         | tee -a "$LOG_FILTRO" | sed 's/^/    /'; then
+      ok "las ${#PARTES[@]} partes cruzarian a la zona limpia"
+    else
+      die "el filtro rechazaria alguna parte, y un lote es una unidad: si una
+       cae, NO se envia ninguna. No se ha subido nada.
+
+       Arriba tienes que peticion y que capa. Si quieres subirlo igualmente
+       para ver el veredicto real, repite con --sin-filtro."
+    fi
+  else
+    # Fallar en frio y no seguir a ciegas: si el filtro no puede correr, quien
+    # sube tiene que saberlo y decidir, no enterarse por una alarma.
+    die "el interprete '${FILTRO}' no tiene boto3, asi que no se puede pasar el
+       filtro. Crea el venv (make venv) o repite con --sin-filtro."
+  fi
+fi
 
 # --- el manifiesto ---------------------------------------------------------
 MANIFIESTO="$(jq -nc \
@@ -119,22 +227,35 @@ MANIFIESTO="$(jq -nc \
 paso "Manifiesto"
 jq . <<<"$MANIFIESTO" | sed 's/^/    /'
 
-if $SOLO_MANIFIESTO; then
-  printf '\n    %s--solo-manifiesto: no se ha subido nada%s\n\n' "$AMBAR" "$R"
+# --- a donde va cada cosa --------------------------------------------------
+# Los nombres son construccion de cadenas y no necesitan credenciales, asi que
+# se calculan aqui: el ensayo en seco tiene que poder enseñar los destinos.
+# Son DOS buckets distintos, y es lo primero que hay que poder comprobar sin
+# subir nada.
+RAW="$(itl_bucket "$ENTORNO" raw)"
+CLEAN="$(itl_bucket "$ENTORNO" clean)"
+TABLA="$(itl_table "$ENTORNO")"
+DESTINO="${PREFIJO}/${NOMBRE}"
+MANIFEST_KEY="${DESTINO}/${ITL_MANIFEST_SUFFIX}"
+
+paso "Destino"
+printf '    %s%-11s%s s3://%s/%s/\n' "$B" "partes" "$R" "$RAW" "$DESTINO"
+printf '    %s%-11s%s s3://%s/%s\n' "$B" "manifiesto" "$R" "$CLEAN" "$MANIFEST_KEY"
+printf '    %sla carpeta del lote es la misma en los dos buckets, y es lo que\n' "$D"
+printf '    permite al submitter emparejarlos sin leer raw: %s%s\n' "$DESTINO" "$R"
+
+if $DRY_RUN; then
+  printf '\n    %s--dry-run: validacion terminada; no se ha subido nada%s\n\n' "$AMBAR" "$R"
   exit 0
 fi
 
 # --- subir -----------------------------------------------------------------
 AWS=(aws --region "$REGION" --output json)
-# Los nombres de bucket ya no llevan el id de cuenta, pero la llamada se queda:
-# es la forma barata de fallar aqui si las credenciales caducaron, en vez de a
-# mitad de subida con medio lote arriba.
+# La llamada de identidad se queda aunque los nombres ya no lleven el id de
+# cuenta: es la forma barata de fallar aqui si las credenciales caducaron, en
+# vez de a mitad de subida con medio lote arriba.
 "${AWS[@]}" sts get-caller-identity >/dev/null \
   || die "credenciales AWS invalidas o expiradas"
-RAW="$(itl_bucket "$ENTORNO" raw)"
-CLEAN="$(itl_bucket "$ENTORNO" clean)"
-TABLA="$(itl_table "$ENTORNO")"
-DESTINO="${PREFIJO}/${NOMBRE}"
 
 paso "Subiendo las partes a s3://${RAW}/${DESTINO}/"
 
@@ -153,7 +274,6 @@ done
 # es lo que permite al submitter emparejar el manifiesto con sus partes sin
 # tener que leer raw.
 paso "Subiendo el manifiesto a s3://${CLEAN}/${DESTINO}/"
-MANIFEST_KEY="${DESTINO}/${ITL_MANIFEST_SUFFIX}"
 echo "$MANIFIESTO" | "${AWS[@]}" s3api put-object --bucket "$CLEAN" \
   --key "$MANIFEST_KEY" --body /dev/stdin \
   --content-type application/json >/dev/null

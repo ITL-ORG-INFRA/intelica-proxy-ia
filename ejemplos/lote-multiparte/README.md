@@ -24,9 +24,17 @@ tienen respuesta no se parece a un PDF de verdad.
 
 ## Ejecutarlo de punta a punta
 
+Esta es la forma recomendada de enviar un lote desde local: el script genera el
+manifiesto a partir de las partes reales y mantiene el orden y los dos destinos
+correctos, por lo que no hace falta subir objetos a mano.
+
 ```bash
 ./scripts/subir-lote.sh dev ejemplos/lote-multiparte lote-tarifas-01
 ```
+
+Cada ejecución deja `ejecucion.log` y `filtro.log` en una carpeta propia bajo
+`dist/logs/subir-lote/`. Si alguna parte no cruza, `filtro.log` conserva el
+fichero, el índice de petición, la capa y el motivo sin copiar el payload.
 
 Sube las tres partes a `raw/input/lote-tarifas-01/` y, al final, genera y sube
 el `_MANIFEST.json` a `clean/input/lote-tarifas-01/` — que es lo que dispara el
@@ -56,7 +64,12 @@ aws dynamodb get-item --region eu-south-2 \
 
 ## Antes de subir nada
 
-El filtro se puede pasar en local, sin tocar AWS ni gastar nada:
+**Ya no hace falta acordarse**: `subir-lote.sh` pasa el filtro él solo antes de
+subir, y si alguna parte no cruzaría no sube ninguna. Un lote es una unidad, así
+que subir el resto sólo dejaría partes sueltas en `clean` que no se enviarían
+nunca, y dispararía `BatchesQuarantined` a quien recibe las alarmas.
+
+Para verlo por separado, sin tocar AWS ni gastar nada:
 
 ```bash
 python3 scripts/probar_filtro.py ejemplos/lote-multiparte/parte-*.json
@@ -64,3 +77,11 @@ python3 scripts/probar_filtro.py ejemplos/lote-multiparte/parte-*.json
 
 Las once peticiones deben salir limpias. Si alguna no lo hace, hay una
 regresión en el sanitizer — este lote no tiene nada que ocultar.
+
+Y si quieres subir a propósito algo que el filtro rechaza —para ver el veredicto
+real del sanitizer, que es lo que hace `probar-flujo.sh` con las suites de
+ejemplos— existe el escape:
+
+```bash
+./scripts/subir-lote.sh dev ejemplos/lote-multiparte --sin-filtro
+```

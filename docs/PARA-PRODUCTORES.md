@@ -38,11 +38,32 @@ Reglas que conviene saber antes, porque el proxy es **estricto a propósito**:
 |---|---|
 | Sólo se admiten las claves de arriba | Deny-by-default: cualquier otra rechaza la petición |
 | `custom_id` único y opaco | Viaja a Anthropic. Sólo alfanumérico, guion y guion bajo. **No pongas un DNI ni un número de cuenta ahí** |
-| Modelos de la lista blanca | `claude-opus-4-5`, `claude-sonnet-4-5`, `claude-haiku-4-5-20251001` |
+| Modelo | Tiene que aparecer en `ALLOWED_MODELS` de la Lambda desplegada. Anthropic ya ofrece `claude-sonnet-5` y `claude-opus-5`, pero el proxy no los acepta hasta ampliar esa lista en Terraform |
 | Sólo texto | Nada de imágenes, PDFs ni base64 |
 | Máximo 100.000 peticiones y 100 MB por lote | Si no cabe, pártelo |
 
 ## 2. Subirlo
+
+### Camino recomendado desde local
+
+La forma más segura de enviar los archivos de un lote es usar el script del
+repositorio, no construir el manifiesto ni ejecutar varios `aws s3 cp` a mano:
+
+```bash
+./scripts/subir-lote.sh dev ./mi-carpeta --dry-run
+./scripts/subir-lote.sh dev ./mi-carpeta \
+  "lote-$(date +%Y%m%d-%H%M%S)"
+```
+
+El primer comando valida sin subir. El segundo comprueba todos los JSON y los
+`custom_id`, pasa el filtro local, genera `_MANIFEST.json` desde los archivos
+reales, sube las partes a `raw/input/<lote>/` y cierra el lote subiendo el
+manifiesto a `clean/input/<lote>/`. Además deja una carpeta de logs por
+ejecución en `dist/logs/subir-lote/`.
+
+Los comandos manuales de esta sección documentan el contrato para productores
+que necesiten integrarlo en su propio sistema; para una ejecución desde local,
+el script es el camino preferido.
 
 Un lote de un solo fichero va entero a `raw`, bajo `input/`:
 

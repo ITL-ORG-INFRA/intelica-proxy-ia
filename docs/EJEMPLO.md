@@ -4,12 +4,11 @@ Paso a paso para mandar trabajo al proxy cuando el lote se parte en varios
 ficheros. Es el flujo que usa el equipo de Cuotas con las guías de tarifas de
 Mastercard.
 
-> **Estado:** el disparo por `_MANIFEST.json` necesita una regla en el repo de
-> Terraform —sobre el bucket **clean**, prefijo `input/` y sufijo
-> `_MANIFEST.json`— que hay que confirmar que está aplicada (ver
-> [PROMPT-TERRAFORM-MANIFIESTO.md](PROMPT-TERRAFORM-MANIFIESTO.md)). Sin ella
-> cada `.json` se procesa por separado y subir el manifiesto no dispara el
-> envío. El resto de esta guía ya es válido.
+> **Estado:** este repositorio confirma el contrato, pero Terraform vive en
+> otro repositorio. Antes de la primera prueba comprueba en AWS que la regla
+> `itl-0003-proxy-ia-<entorno>-evb-manifest-03` está aplicada sobre el bucket
+> **clean**, con prefijo `input/` y sufijo `_MANIFEST.json`. Sin esa regla las
+> partes se sanitizan, pero subir el manifiesto no dispara el envío.
 
 ---
 
@@ -113,12 +112,52 @@ cualquier otra cosa rechaza la petición.
 
 | Permitido en `params` | |
 |---|---|
-| `model` | de la lista blanca: `claude-opus-4-5`, `claude-sonnet-4-5`, `claude-haiku-4-5-20251001` |
+| `model` | Tiene que estar en `ALLOWED_MODELS` del entorno; consulta la lista desplegada antes de generar el lote |
 | `max_tokens` | entero positivo |
 | `system` | texto o lista de bloques `{type, text, cache_control}` |
 | `messages` | lista de `{role, content}`, con `role` = `user` o `assistant` |
 | `output_config` | `format.type` = `json_schema` o `text`; el esquema, libre |
 | `temperature`, `top_p`, `top_k`, `stop_sequences` | opcionales |
+
+### Modelos actuales y lista blanca del proxy
+
+Anthropic ya ofrece Claude Sonnet 5 (`claude-sonnet-5`) y Claude Opus 5
+(`claude-opus-5`). Que un modelo exista en Anthropic **no significa que este
+proxy lo admita automáticamente**: el sanitizer compara `params.model` con la
+variable `ALLOWED_MODELS` desplegada por Terraform.
+
+La configuración de Terraform documentada actualmente en este repositorio aún
+propone esta lista:
+
+```text
+claude-opus-4-5,claude-sonnet-4-5,claude-haiku-4-5-20251001
+```
+
+Por tanto, mientras no se actualice y despliegue `ALLOWED_MODELS`, un lote con
+`claude-sonnet-5` o `claude-opus-5` acaba en cuarentena con `modelo no
+permitido`. Los ejemplos de esta guía conservan `claude-sonnet-4-5` porque es
+la lista que el contrato de infraestructura todavía declara, no porque sea la
+última versión disponible en Anthropic.
+
+Antes de habilitar Claude 5 hay que probar además sus diferencias de contrato:
+
+- Sonnet 5 y Opus 5 usan thinking adaptativo por defecto; `max_tokens` incluye
+  tanto el thinking como la respuesta.
+- Sonnet 5 rechaza `temperature`, `top_p` y `top_k` cuando se envían con valores
+  no predeterminados. El envelope del proxy todavía permite esos campos de
+  forma general.
+- Hay que ejecutar los lotes de aceptación y confirmar Message Batches antes
+  de ampliar la lista en `dev`, y después promover el mismo cambio a `qa`.
+
+La lista efectiva es la configuración de la Lambda, no esta guía. Se puede
+consultar de forma autenticada así:
+
+```bash
+aws lambda get-function-configuration \
+  --function-name itl-0003-proxy-ia-dev-lambda-sanitizer-03 \
+  --region eu-south-2 \
+  | jq -r '.Environment.Variables.ALLOWED_MODELS'
+```
 
 Y el `custom_id`: **sólo alfanumérico, guion y guion bajo**, máximo 64
 caracteres. Un punto lo rechaza. Tiene que ser **opaco**: viaja a Anthropic tal
@@ -137,10 +176,17 @@ cual, así que no metas un DNI ni un número de cuenta ahí.
 
 ---
 
-> **No lo escribas a mano.** `./scripts/subir-lote.sh dev ./mi-carpeta` genera el
-> manifiesto desde lo que realmente hay en la carpeta, valida las partes, avisa
-> de `custom_id` repetidos entre ellas, y sube en el orden correcto. Con
-> `--solo-manifiesto` te lo enseña sin subir nada.
+> **Forma recomendada de enviar un lote.** Usa
+> `./scripts/subir-lote.sh dev ./mi-carpeta`. El script valida todos los JSON,
+> pasa el filtro local, comprueba los `custom_id`, genera el manifiesto desde
+> los archivos que realmente va a subir, envía primero las partes a `raw` y
+> finalmente el manifiesto a `clean`. Así se evita que la lista `files`, los
+> destinos o el orden queden desincronizados por un comando manual.
+>
+> Ejecuta primero `./scripts/subir-lote.sh dev ./mi-carpeta --dry-run` para
+> comprobar el lote y los destinos sin escribir en AWS. Los pasos manuales de
+> las secciones siguientes explican el contrato y sirven para integrar otro
+> productor, pero no son el camino habitual para una subida desde local.
 >
 > Los dos pasos siguientes explican qué construye, para que puedas replicarlo en
 > tu propio generador.
@@ -149,7 +195,7 @@ cual, así que no metas un DNI ni un número de cuenta ahí.
 
 ```json
 {
-  "lote": "lote-2026-08-27",
+  "batch": "lote-2026-08-27",
   "files": [
     "parte-01.json",
     "parte-02.json",
@@ -166,7 +212,7 @@ Tres campos y nada más:
 
 | Campo | Para qué |
 |---|---|
-| `lote` | Nombre legible del lote |
+| `batch` | Nombre legible del lote |
 | `files` | **Los nombres de las partes**, sin ruta. Es lo que el submitter usa para saber cuántas esperar |
 | `total_requests` | Informativo, para cuadrar cuentas |
 
@@ -356,6 +402,71 @@ Contra el entorno real, con las suites de ejemplo:
 
 ```bash
 ./scripts/probar-flujo.sh dev ejemplos/01-limpios
+```
+
+### Prueba autenticada desde local
+
+Primero confirma qué identidad usará la CLI. Esta llamada es de sólo lectura y
+falla de inmediato si el perfil o la sesión SSO han caducado:
+
+```bash
+aws sts get-caller-identity --region eu-south-2
+```
+
+Comprueba después la infraestructura que cierra el lote. La regla debe estar
+`ENABLED`, tener un target y su `EventPattern` debe nombrar el bucket `clean`,
+el prefijo `input/` y el sufijo `_MANIFEST.json`:
+
+```bash
+REGLA=itl-0003-proxy-ia-dev-evb-manifest-03
+aws events describe-rule --name "$REGLA" --region eu-south-2 \
+  | jq '{State, EventPattern}'
+aws events list-targets-by-rule --rule "$REGLA" --region eu-south-2 \
+  | jq '.Targets[] | {Id, Arn}'
+aws s3api get-bucket-notification-configuration \
+  --bucket itl-0003-proxy-ia-dev-s3-clean-03 --region eu-south-2 \
+  | jq '.EventBridgeConfiguration'
+```
+
+Haz primero el ensayo local. Calcula y enseña los dos destinos, genera el
+manifiesto y ejecuta el filtro real, pero no usa credenciales ni escribe en S3:
+
+```bash
+./scripts/subir-lote.sh dev ejemplos/lote-multiparte \
+  prueba-local-01 --dry-run
+```
+
+Si termina limpio, ejecuta la subida autenticada. Usa un nombre nuevo en cada
+intento para no mezclar objetos con una ejecución anterior:
+
+```bash
+./scripts/subir-lote.sh dev ejemplos/lote-multiparte \
+  "prueba-local-$(date +%Y%m%d-%H%M%S)"
+```
+
+El script valida las credenciales con STS antes de escribir, sube las partes a
+`raw/input/<lote>/` y sólo cuando todas terminaron sube el manifiesto a
+`clean/input/<lote>/_MANIFEST.json`.
+
+### Logs de cada ejecución
+
+Cada invocación —también un ensayo o una que falla antes de subir— crea una
+carpeta independiente:
+
+```text
+dist/logs/subir-lote/20260830T231500Z-12345/
+├── ejecucion.log   # flujo completo, destinos, STS/AWS y código de salida
+└── filtro.log      # motivo por JSON: request, capa, tipo y recomendación
+```
+
+La ruta exacta aparece al inicio y al final de la consola. Los logs no copian
+el contenido de los JSON ni el valor sensible encontrado. Para un JSON mal
+formado conservan el error detallado de `jq`; para un rechazo del sanitizer
+conservan el índice `requests[n]`, la capa, el tipo, la ubicación y
+`what_to_do`. Se puede cambiar la raíz sin modificar el repositorio:
+
+```bash
+ITL_LOG_ROOT=/ruta/segura/logs ./scripts/subir-lote.sh dev ./mi-lote
 ```
 
 ---

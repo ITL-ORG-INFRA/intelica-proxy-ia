@@ -189,8 +189,24 @@ def main(argv):
                 show(report, True)
                 for consejo in report.get("what_to_do", []):
                     print(f"        {AMBAR}→{R} {consejo}")
+                # Un fichero suelto no declara que espera, asi que lo unico
+                # que se puede afirmar es si cruzaria o no. Si no cruza, el
+                # codigo de salida tiene que decirlo: sin esto el script
+                # imprimia "cuarentena" y devolvia 0, y encadenarlo con el
+                # subidor —que es justo para lo que sirve— dejaba pasar el
+                # lote que acababa de rechazar.
+                if report["status"] != "clean":
+                    fallidos += 1
     finally:
         shutil.rmtree(paquete, ignore_errors=True)
+
+    if sueltos and not suites:
+        print(f"\n{AZUL}==>{R} {B}Resumen{R}")
+        if fallidos:
+            print(f"    {ROJO}{fallidos} de {len(sueltos)} no cruzarian{R}")
+        else:
+            print(f"    {VERDE}los {len(sueltos)} cruzarian a la zona limpia{R}")
+        print()
 
     if suites:
         total = ok + fallidos
