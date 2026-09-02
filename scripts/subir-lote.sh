@@ -28,8 +28,15 @@
 #
 #   ./scripts/subir-lote.sh dev ./mi-carpeta
 #   ./scripts/subir-lote.sh dev ./mi-carpeta lote-agosto     nombre del lote
-#   ./scripts/subir-lote.sh dev ./mi-carpeta --solo-manifiesto   ver sin subir
+#   ./scripts/subir-lote.sh dev ./mi-carpeta --dry-run       validar sin subir
 #   ./scripts/subir-lote.sh dev ./mi-carpeta --sin-filtro    subir sin comprobar
+#
+# Cada ejecucion deja evidencia local en:
+#   dist/logs/subir-lote/<fecha>-<pid>/ejecucion.log
+#   dist/logs/subir-lote/<fecha>-<pid>/filtro.log
+#
+# Los logs explican el rechazo sin copiar el contenido del payload: fichero,
+# indice de request, capa, tipo, ubicacion y recomendacion.
 # ---------------------------------------------------------------------------
 set -Eeuo pipefail
 
@@ -44,11 +51,54 @@ NOMBRE="${3:-}"
 REGION="${AWS_REGION:-eu-south-2}"
 PREFIJO="${PREFIJO:-${ITL_PREFIX_INPUT%/}}"
 
-SOLO_MANIFIESTO=false
+# --- evidencia de la ejecucion --------------------------------------------
+# Se crea antes de validar argumentos para que incluso un fallo de uso, una
+# dependencia ausente o unas credenciales caducadas deje rastro. dist/ esta
+# ignorado por git y no se sube: los diagnosticos pueden describir hallazgos
+# sobre datos que siguen perteneciendo al productor.
+RAIZ_LOGS="${ITL_LOG_ROOT:-${RAIZ}/dist/logs/subir-lote}"
+
+# Un proceso exterior captura stdout y stderr con tee. No se usa
+# `exec > >(tee ...)`: depende de /dev/fd y falla en algunos runners y
+# sandboxes. PIPESTATUS conserva el resultado real del script, no el de tee.
+if [[ "${ITL_SUBIR_LOTE_LOG_ACTIVO:-false}" != "true" ]]; then
+  INICIO_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  ID_EJECUCION="$(date -u +%Y%m%dT%H%M%SZ)-$$"
+  LOG_DIR="${RAIZ_LOGS}/${ID_EJECUCION}"
+  LOG_EJECUCION="${LOG_DIR}/ejecucion.log"
+  mkdir -p "$LOG_DIR"
+  touch "${LOG_DIR}/filtro.log"
+  set +e
+  ITL_SUBIR_LOTE_LOG_ACTIVO=true \
+  ITL_SUBIR_LOTE_LOG_DIR="$LOG_DIR" \
+  ITL_SUBIR_LOTE_INICIO_UTC="$INICIO_UTC" \
+    "$0" "$@" 2>&1 | tee -a "$LOG_EJECUCION"
+  CODIGOS=("${PIPESTATUS[@]}")
+  CODIGO_SCRIPT="${CODIGOS[0]}"
+  CODIGO_TEE="${CODIGOS[1]}"
+  printf '\n[registro] fin_utc=%s codigo_salida=%s\n' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$CODIGO_SCRIPT" | tee -a "$LOG_EJECUCION"
+  printf '[registro] carpeta=%s\n' "$LOG_DIR" | tee -a "$LOG_EJECUCION"
+  [[ "$CODIGO_TEE" -eq 0 ]] || exit "$CODIGO_TEE"
+  exit "$CODIGO_SCRIPT"
+fi
+
+INICIO_UTC="${ITL_SUBIR_LOTE_INICIO_UTC}"
+LOG_DIR="${ITL_SUBIR_LOTE_LOG_DIR}"
+ID_EJECUCION="$(basename "$LOG_DIR")"
+LOG_FILTRO="${LOG_DIR}/filtro.log"
+
+printf '[registro] inicio_utc=%s ejecucion=%s entorno=%s carpeta_entrada=%s\n' \
+  "$INICIO_UTC" "$ID_EJECUCION" "${ENTORNO:-<vacio>}" "${CARPETA:-<vacia>}"
+printf '[registro] no se guarda el contenido de los JSON; solo diagnosticos\n'
+
+DRY_RUN=false
 SIN_FILTRO=false
 for arg in "$@"; do
   case "$arg" in
-    --solo-manifiesto) SOLO_MANIFIESTO=true; [[ "$NOMBRE" == "$arg" ]] && NOMBRE="" ;;
+    --dry-run)         DRY_RUN=true; [[ "$NOMBRE" == "$arg" ]] && NOMBRE="" ;;
+    # Alias compatible con llamadas anteriores. Ya no se anuncia en la ayuda.
+    --solo-manifiesto) DRY_RUN=true; [[ "$NOMBRE" == "$arg" ]] && NOMBRE="" ;;
     --sin-filtro)      SIN_FILTRO=true;      [[ "$NOMBRE" == "$arg" ]] && NOMBRE="" ;;
   esac
 done
@@ -64,8 +114,10 @@ ok()   { printf '    %s✓%s %s\n' "$VERDE" "$R" "$*"; }
 dato() { printf '    %s·%s %s\n' "$D" "$R" "$*"; }
 die()  { printf '\n%serror:%s %s\n' "$ROJO" "$R" "$*" >&2; exit 1; }
 
+dato "logs de esta ejecucion: ${LOG_DIR}"
+
 [[ "$ENTORNO" =~ ^(dev|qa|prod)$ ]] \
-  || die "uso: $0 <dev|qa|prod> <carpeta> [nombre-del-lote] [--solo-manifiesto] [--sin-filtro]"
+  || die "uso: $0 <dev|qa|prod> <carpeta> [nombre-del-lote] [--dry-run] [--sin-filtro]"
 [[ -d "$CARPETA" ]] || die "no existe la carpeta: ${CARPETA:-<vacia>}"
 
 for bin in aws jq python3; do
@@ -91,13 +143,15 @@ NOMBRES=()
 PROBLEMAS=0
 for ruta in "${PARTES[@]}"; do
   base="$(basename "$ruta")"
-  if ! jq empty "$ruta" 2>/dev/null; then
+  if ! ERROR_JSON="$(jq empty "$ruta" 2>&1)"; then
     printf '    %s✗%s %-28s no es JSON valido\n' "$ROJO" "$R" "$base"
+    printf '        %s\n' "$ERROR_JSON" | tee -a "$LOG_FILTRO"
     PROBLEMAS=$((PROBLEMAS + 1)); continue
   fi
   n="$(jq '(.requests // []) | length' "$ruta")"
   if [[ "$n" -eq 0 ]]; then
     printf '    %s✗%s %-28s sin array "requests"\n' "$ROJO" "$R" "$base"
+    printf '%s: sin array "requests" no vacio\n' "$base" >> "$LOG_FILTRO"
     PROBLEMAS=$((PROBLEMAS + 1)); continue
   fi
   bytes="$(wc -c < "$ruta" | tr -d ' ')"
@@ -117,7 +171,7 @@ DUPES="$(jq -r '.requests[].custom_id' "${PARTES[@]}" 2>/dev/null \
          | sort | uniq -d | head -5)"
 if [[ -n "$DUPES" ]]; then
   printf '    %s✗%s custom_id repetidos entre partes:\n' "$ROJO" "$R"
-  echo "$DUPES" | sed 's/^/        /'
+  printf '        %s\n' "${DUPES//$'\n'/$'\n        '}" | tee -a "$LOG_FILTRO"
   die "Anthropic rechazaria el lote entero. Corrigelos antes de subir."
 fi
 ok "$TOTAL peticiones, todos los custom_id unicos"
@@ -145,7 +199,8 @@ else
        Crea el venv (make venv) o repite con --sin-filtro."
 
   if "$FILTRO" -c 'import boto3' 2>/dev/null; then
-    if "$FILTRO" "${RAIZ}/scripts/probar_filtro.py" "${PARTES[@]}" 2>&1 | sed 's/^/    /'; then
+    if "$FILTRO" "${RAIZ}/scripts/probar_filtro.py" "${PARTES[@]}" 2>&1 \
+         | tee -a "$LOG_FILTRO" | sed 's/^/    /'; then
       ok "las ${#PARTES[@]} partes cruzarian a la zona limpia"
     else
       die "el filtro rechazaria alguna parte, y un lote es una unidad: si una
@@ -189,8 +244,8 @@ printf '    %s%-11s%s s3://%s/%s\n' "$B" "manifiesto" "$R" "$CLEAN" "$MANIFEST_K
 printf '    %sla carpeta del lote es la misma en los dos buckets, y es lo que\n' "$D"
 printf '    permite al submitter emparejarlos sin leer raw: %s%s\n' "$DESTINO" "$R"
 
-if $SOLO_MANIFIESTO; then
-  printf '\n    %s--solo-manifiesto: no se ha subido nada%s\n\n' "$AMBAR" "$R"
+if $DRY_RUN; then
+  printf '\n    %s--dry-run: validacion terminada; no se ha subido nada%s\n\n' "$AMBAR" "$R"
   exit 0
 fi
 

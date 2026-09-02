@@ -24,9 +24,17 @@ tienen respuesta no se parece a un PDF de verdad.
 
 ## Ejecutarlo de punta a punta
 
+Esta es la forma recomendada de enviar un lote desde local: el script genera el
+manifiesto a partir de las partes reales y mantiene el orden y los dos destinos
+correctos, por lo que no hace falta subir objetos a mano.
+
 ```bash
 ./scripts/subir-lote.sh dev ejemplos/lote-multiparte lote-tarifas-01
 ```
+
+Cada ejecución deja `ejecucion.log` y `filtro.log` en una carpeta propia bajo
+`dist/logs/subir-lote/`. Si alguna parte no cruza, `filtro.log` conserva el
+fichero, el índice de petición, la capa y el motivo sin copiar el payload.
 
 Sube las tres partes a `raw/input/lote-tarifas-01/` y, al final, genera y sube
 el `_MANIFEST.json` a `clean/input/lote-tarifas-01/` — que es lo que dispara el
